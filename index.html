@@ -194,8 +194,8 @@
 </div>
 <div id="receipt" class="panel">
   <div class="paper" id="receiptPaper"></div>
-  <div class="row"><button class="btn" data-close="receipt" style="justify-content:center">조금 더 있을래요</button><button class="btn primary" id="byeBtn">다음에 또 올게요</button></div>
-  <p style="margin-top:8px;text-align:center">캡처해서 오늘 하루를 남겨봐요 📸</p>
+  <div class="row"><button class="btn primary" id="storyBtn" style="justify-content:center">📸 인스타 스토리에 올리기</button></div>
+  <div class="row"><button class="btn" data-close="receipt" style="justify-content:center">조금 더 있을래요</button><button class="btn" id="byeBtn" style="justify-content:center">다음에 또 올게요</button></div>
 </div>
 <div id="drawBar" class="pill"><span>손가락으로 김 서린 창에 그려요</span><button id="drawDone">다 그렸어요</button></div>
 <div id="readBar" class="pill"><span id="readTitle"></span><button id="readDone">덮기</button></div>
@@ -329,12 +329,47 @@ function updateFog(dt){
   fogTex.needsUpdate = true;
 }
 function heartPts(cu, cv, r){ const pts = []; for (let i=0;i<=40;i++){ const t = i/40*Math.PI*2; const x = 16*Math.pow(Math.sin(t),3), y = 13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t); pts.push([cu + x/16*r*.62, cv + y/16*r]); } return pts; }
+// ---------- 바깥 날씨: 서울 실제 날씨를 받아와요 (실패하면 비) ----------
+const WX = {
+  rain:  {label:'비',     emoji:'☔'}, storm:{label:'천둥번개', emoji:'⛈'}, snow:{label:'눈', emoji:'❄️'},
+  clear: {label:'맑은 밤', emoji:'🌙'}, cloudy:{label:'흐림', emoji:'☁️'}, fog:{label:'안개', emoji:'🌫'},
+};
+let weather = (params.get('weather') || '').replace(/[^a-z]/g,''); if (!WX[weather]) weather = 'rain';
+let wxTemp = null, flash = 0, nextFlash = 5;
+const flakes = Array.from({length:90}, () => ({x:Math.random()*256, y:Math.random()*256, r:rand(.8,2.2), v:rand(10,26), s:rand(0,6)}));
+const stars = Array.from({length:60}, () => ({x:Math.random()*256, y:Math.random()*150, a:rand(.3,1), t:rand(0,6)}));
+function wxFromCode(c){ if (c >= 95) return 'storm'; if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'snow'; if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return 'rain'; if (c === 45 || c === 48) return 'fog'; if (c >= 2) return 'cloudy'; return 'clear'; }
+async function loadWeather(){
+  if (params.get('weather')) { applyWeather(); return; }
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=weather_code,temperature_2m&timezone=Asia%2FSeoul');
+    const j = await r.json(); weather = wxFromCode(j.current.weather_code); wxTemp = Math.round(j.current.temperature_2m);
+  } catch(e) { weather = 'rain'; }
+  applyWeather();
+  setTimeout(() => toast('지금 서울은 ' + WX[weather].emoji + ' ' + WX[weather].label + (wxTemp !== null ? ' · ' + wxTemp + '°' : '')), 4200);
+  track('weather', {wx: weather});
+}
+function applyWeather(){
+  if (rainGainNode) rainGainNode.gain.setTargetAtTime(weather === 'rain' ? .09 : weather === 'storm' ? .14 : 0, actx.currentTime, 1);
+  fill.color.set(weather === 'snow' ? '#c8d8ff' : weather === 'clear' ? '#7a8ad0' : '#8aa0ff');
+  updateLabel();
+}
 function drawRain(dt){
-  const g = rg; const gr = g.createLinearGradient(0,0,0,256); gr.addColorStop(0,'#0e1426'); gr.addColorStop(.6,'#1d2340'); gr.addColorStop(1,'#3a2a3a'); g.fillStyle = gr; g.fillRect(0,0,256,256);
+  const g = rg; const W = weather;
+  const top = W === 'snow' ? '#2a3044' : W === 'fog' ? '#3a3a48' : W === 'clear' ? '#060a1c' : W === 'cloudy' ? '#141826' : '#0e1426';
+  const mid = W === 'snow' ? '#3d4560' : W === 'fog' ? '#55566a' : W === 'clear' ? '#141a38' : '#1d2340';
+  const gr = g.createLinearGradient(0,0,0,256); gr.addColorStop(0,top); gr.addColorStop(.6,mid); gr.addColorStop(1,'#3a2a3a'); g.fillStyle = gr; g.fillRect(0,0,256,256);
+  if (W === 'clear') { for (const st of stars) { g.fillStyle = `rgba(255,255,240,${st.a*(.6+.4*Math.sin(now*2+st.t))})`; g.fillRect(st.x, st.y, 1.4, 1.4); } const mg = g.createRadialGradient(196,52,0,196,52,34); mg.addColorStop(0,'rgba(255,244,214,1)'); mg.addColorStop(.45,'rgba(255,244,214,.9)'); mg.addColorStop(.5,'rgba(255,230,180,.25)'); mg.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle = mg; g.fillRect(150,10,90,90); }
   // blurry neon street lights outside
   for (const [x,y,r,c] of [[60,170,38,'rgba(255,90,140,.35)'],[180,150,46,'rgba(255,190,90,.30)'],[120,200,30,'rgba(90,180,255,.25)']]) { const rad = g.createRadialGradient(x,y,0,x,y,r); rad.addColorStop(0,c); rad.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle = rad; g.fillRect(x-r,y-r,r*2,r*2); }
-  g.strokeStyle = 'rgba(200,220,255,.35)'; g.lineWidth = 1;
-  for (const d of drops) { d.y += d.v*dt; if (d.y > 270) { d.y = -20; d.x = Math.random()*256; } g.beginPath(); g.moveTo(d.x,d.y); g.lineTo(d.x-1.5,d.y+d.l); g.stroke(); }
+  if (W === 'rain' || W === 'storm') {
+    g.strokeStyle = 'rgba(200,220,255,.35)'; g.lineWidth = 1;
+    const n = W === 'storm' ? drops.length : Math.floor(drops.length*.75);
+    for (let i=0;i<n;i++) { const d = drops[i]; d.y += d.v*dt*(W === 'storm' ? 1.4 : 1); if (d.y > 270) { d.y = -20; d.x = Math.random()*256; } g.beginPath(); g.moveTo(d.x,d.y); g.lineTo(d.x-(W === 'storm' ? 4 : 1.5),d.y+d.l); g.stroke(); }
+  }
+  if (W === 'snow') { g.fillStyle = 'rgba(255,255,255,.9)'; for (const f of flakes) { f.y += f.v*dt; f.x += Math.sin(now*.8 + f.s)*6*dt; if (f.y > 260) { f.y = -4; f.x = Math.random()*256; } g.beginPath(); g.arc(f.x, f.y, f.r, 0, Math.PI*2); g.fill(); } }
+  if (W === 'fog') { g.fillStyle = 'rgba(200,200,215,.18)'; g.fillRect(0,0,256,256); }
+  if (W === 'storm') { nextFlash -= dt; if (nextFlash < 0) { flash = 1; nextFlash = rand(6,15); setTimeout(() => thunder(), rand(400,1400)); } if (flash > 0) { g.fillStyle = `rgba(230,235,255,${flash*.85})`; g.fillRect(0,0,256,256); flash = Math.max(0, flash - dt*4); } fill.intensity = .35 + flash*2.5; }
   rainTex.needsUpdate = true;
 }
 
@@ -612,7 +647,7 @@ class Person {
     this.pose = 'stand'; this.tempPose = null; this.tempUntil = 0; this.walkPhase = Math.random()*6; this.speed = isMe ? 2.2 : 1.4;
     this.cur = JSON.parse(JSON.stringify(POSES.stand)); this.seat = null; this.drink = null; this.glass = null; this.level = 1; this.napkin = null;
     this.m.parts.forEach(p => p.userData.owner = this);
-    const lbl = document.createElement('div'); lbl.className = 'lbl' + (isMe ? ' me' : ''); lbl.textContent = isMe ? '나 · ' + name : name; $('labels').appendChild(lbl); this.lbl = lbl; this.lblUntil = 0;
+    const lbl = document.createElement('div'); lbl.className = 'lbl' + (isMe ? ' me' : ''); lbl.textContent = isMe ? '나 · ' + name + (regular.visits >= 3 ? ' ⭐' : '') : name; $('labels').appendChild(lbl); this.lbl = lbl; this.lblUntil = 0;
     const bub = document.createElement('div'); bub.className = 'bub'; bub.textContent = '🥂'; $('labels').appendChild(bub); this.bub = bub; this.bubUntil = 0;
   }
   remove(){ this.leaveSeat(); scene.remove(this.m.g); this.lbl.remove(); this.bub.remove(); if (this.glass && this.glass.parent) this.glass.parent.remove(this.glass); if (this.coaster) scene.remove(this.coaster); if (this.extra) scene.remove(this.extra); }
@@ -784,7 +819,12 @@ const myId = Math.random().toString(36).slice(2,10);
 const myLook = saved && saved.look ? sanitizeLook(saved.look) : randomLook();
 const myName = saved && typeof saved.name === 'string' ? saved.name.slice(0,20) : uniqueName(); used.add(myName);
 let myDrink = saved && DRINKS[saved.drink] ? saved.drink : 'highball';
-function saveMe(){ try { localStorage.setItem('honjan-me', JSON.stringify({name:myName, look:myLook, drink:myDrink})); } catch(e) {} }
+// 단골: 이 브라우저에 방문 날짜와 마신 술을 기억해요 (서버에는 안 남아요)
+const todayKST = new Date(Date.now() + 9*3600e3 - 6*3600e3).toISOString().slice(0,10);   // 새벽 6시 전까지는 전날 영업으로 쳐요
+const regular = Object.assign({visits:0, last:'', drinks:{}}, saved && saved.regular || {});
+if (regular.last !== todayKST) { regular.visits += 1; regular.last = todayKST; }
+const favDrink = () => { const e = Object.entries(regular.drinks).sort((a,b) => b[1]-a[1])[0]; return e && e[1] >= 2 ? e[0] : null; };
+function saveMe(){ try { localStorage.setItem('honjan-me', JSON.stringify({name:myName, look:myLook, drink:myDrink, regular})); } catch(e) {} }
 saveMe();
 const stats = {start: Date.now(), orders:{}, sips:0, cheers:0, napkins:0, pets:0, draws:0, books:new Set()};
 const me = new Person(myName, true, myLook, myId);
@@ -834,6 +874,8 @@ function renderVisitors(){
 }
 
 /* ---------- audio ---------- */
+let rainGainNode = null;
+function thunder(){ if (!actx || !soundOn) return; const t = actx.currentTime, len = actx.sampleRate*2.5, b = actx.createBuffer(1,len,actx.sampleRate), d = b.getChannelData(0); for (let i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.exp(-i/len*3); const s = actx.createBufferSource(); s.buffer = b; const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160; const g = actx.createGain(); g.gain.value = .9; s.connect(lp); lp.connect(g); g.connect(master); s.start(t); }
 let actx = null, soundOn = false, master = null, musicGain = null, crackleGain = null, lpTrack = 0, nextBeat = 0, beatIdx = 0;
 const TRACKS = [
   {name:'비 오는 골목', mood:'느린 재즈 · 살짝 쓸쓸하게', c:'#d0603a', bpm:68, chords:[[220,261.6,329.6,392],[174.6,220,261.6,329.6],[196,246.9,293.7,349.2],[164.8,207.7,246.9,329.6]]},
@@ -850,7 +892,7 @@ function initAudio(){
     let lp1 = 0; for (let i=0;i<len;i++) { lp1 = lp1*.6 + (Math.random()*2-1)*.4; d[i] = lp1*.5; }
     const src = actx.createBufferSource(); src.buffer = buf; src.loop = true;
     const bp = actx.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 1400; bp.Q.value = .3;
-    const rg2 = actx.createGain(); rg2.gain.value = .09; src.connect(bp); bp.connect(rg2); rg2.connect(master); src.start();
+    const rg2 = actx.createGain(); rg2.gain.value = weather === 'rain' ? .09 : weather === 'storm' ? .14 : 0; rainGainNode = rg2; src.connect(bp); bp.connect(rg2); rg2.connect(master); src.start();
     // vinyl crackle
     // LP 지지직: 잔잔한 표면 노이즈 + 톡톡 튀는 먼지 소리 + 가끔 큰 팝
     const cb = actx.createBuffer(1, actx.sampleRate*4, actx.sampleRate), cd = cb.getChannelData(0);
@@ -934,7 +976,7 @@ $('menuBtn').onclick = e => { e.stopPropagation(); closePanels(); renderMenu(); 
 drinkMenu.onclick = e => {
   e.stopPropagation(); const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.drink) {
-    myDrink = b.dataset.drink; saveMe(); me.setDrink(myDrink); pour(); track('drink_order', {drink:myDrink}); if (me.seat !== null) stats.orders[myDrink] = (stats.orders[myDrink]||0) + 1;
+    myDrink = b.dataset.drink; me.setDrink(myDrink); pour(); track('drink_order', {drink:myDrink}); if (me.seat !== null) { stats.orders[myDrink] = (stats.orders[myDrink]||0) + 1; regular.drinks[myDrink] = (regular.drinks[myDrink]||0) + 1; } saveMe();
     if (me.seat === null) toast('앉으면 ' + DRINKS[myDrink].name + ' 나와요'); else { toast('바텐더가 ' + DRINKS[myDrink].name + '을(를) 내어줬어요'); bartender.temp('standCheers', 1.2); }
   } else if (b.dataset.pose) { if (me.seat === null) toast('먼저 의자에 앉아요'); else { if (me.book !== null && me.book !== undefined) { me.setBook(null); $('readBar').classList.remove('on'); } me.pose = b.dataset.pose; track('pose', {pose:me.pose}); } }
   else if (b.dataset.act === 'leave') { $('readBar').classList.remove('on'); if (drawing) endDraw(); me.leaveSeat(); me.walkTo(me.pos.x, BAR_Z + 1.9); renderVisitors(); }
@@ -989,17 +1031,67 @@ function endDraw(){ drawing = false; drawStroke = null; $('drawBar').classList.r
 $('drawDone').onclick = endDraw;
 function flushDraw(force){ if (!drawSendBuf.length) return; if (!force && now - lastDrawSend < .2) return; if (net) net.send('draw', {id:myId, pts:drawSendBuf.map(([u,v]) => [+u.toFixed(3), +v.toFixed(3)])}); drawSendBuf = drawSendBuf.slice(-1); lastDrawSend = now; }
 // 영수증
-function openReceipt(){
-  closePanels();
+function receiptData(){
   const mins = Math.max(1, Math.round((Date.now() - stats.start)/60000)), d = new Date(Date.now() + 9*3600e3);
   const dateStr = `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}.${String(d.getUTCDate()).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
-  const L = (a,b) => `<div class="l"><span>${a}</span><span>${b}</span></div>`;
-  const drinks = Object.entries(stats.orders).map(([k,n]) => L(DRINKS[k].name, '× ' + n)).join('') || L('아무것도 안 마심', '—');
-  const extra = [stats.sips ? L('한 모금', stats.sips + '번') : '', stats.cheers ? L('짠', stats.cheers + '번') : '', stats.napkins ? L('냅킨 한 줄', stats.napkins + '장') : '', stats.draws ? L('창문 낙서', stats.draws + '획') : '', stats.pets ? L('노가리 쓰다듬기', stats.pets + '번') : '', stats.books.size ? L('읽은 책', [...stats.books].map(i => BOOKS[i].t).join(', ')) : ''].join('');
   const seatName = me.seat !== null ? ({bar:'바', window:'창가', table:'테이블', sofa:'소파', read:'책 코너'}[SEATS[me.seat].kind] + ' ' + (me.seat+1) + '번') : '서서';
-  $('receiptPaper').innerHTML = `<h4>혼 잔</h4><div class="c">골목 끝 작은 바 · ${ROOM}호점</div><hr>${L('일시', dateStr)}${L('손님', esc(myName))}${L('자리', seatName)}<hr>${drinks}${extra ? '<hr>' + extra : ''}<hr>${L('머문 시간', mins + '분')}<div class="l t"><span>합계</span><span>오늘도 수고했어요</span></div><hr><div class="bye">조심히 들어가요 🌙</div>`;
-  $('receipt').classList.add('open'); track('receipt_open', {minutes: mins});
+  const head = [['일시', dateStr], ['손님', myName + (regular.visits >= 3 ? ' ⭐' : '')], ['자리', seatName]];
+  if (regular.visits > 1) head.push(['방문', regular.visits + '번째']);
+  const drinks = Object.entries(stats.orders).map(([k,n]) => [DRINKS[k].name, '× ' + n]);
+  if (!drinks.length) drinks.push(['아무것도 안 마심', '—']);
+  const extra = [];
+  if (stats.sips) extra.push(['한 모금', stats.sips + '번']); if (stats.cheers) extra.push(['짠', stats.cheers + '번']);
+  if (stats.napkins) extra.push(['냅킨 한 줄', stats.napkins + '장']); if (stats.draws) extra.push(['창문 낙서', stats.draws + '획']);
+  if (stats.pets) extra.push(['노가리 쓰다듬기', stats.pets + '번']); if (stats.books.size) extra.push(['읽은 책', [...stats.books].map(i => BOOKS[i].t).join(', ')]);
+  return {mins, head, drinks, extra, weather: WX[weather] ? WX[weather].label + (wxTemp !== null ? ' ' + wxTemp + '°' : '') : ''};
 }
+function openReceipt(){
+  closePanels();
+  const R = receiptData(), L = ([a,b]) => `<div class="l"><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
+  $('receiptPaper').innerHTML = `<h4>혼 잔</h4><div class="c">골목 끝 작은 바 · ${ROOM}호점${R.weather ? ' · 바깥은 ' + esc(R.weather) : ''}</div><hr>${R.head.map(L).join('')}<hr>${R.drinks.map(L).join('')}${R.extra.length ? '<hr>' + R.extra.map(L).join('') : ''}<hr>${L(['머문 시간', R.mins + '분'])}<div class="l t"><span>합계</span><span>오늘도 수고했어요</span></div><hr><div class="bye">조심히 들어가요 🌙</div>`;
+  $('receipt').classList.add('open'); track('receipt_open', {minutes: R.mins});
+}
+// 인스타 스토리 크기(1080×1920) 영수증 이미지
+async function receiptImage(){
+  try { await document.fonts.ready; } catch(e) {}
+  const R = receiptData(), W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#120c10'); bg.addColorStop(.55,'#22161a'); bg.addColorStop(1,'#3a2420'); g.fillStyle = bg; g.fillRect(0,0,W,H);
+  for (const [x,y,r,col] of [[200,1500,420,'rgba(255,90,140,.18)'],[880,1300,460,'rgba(255,180,90,.16)'],[540,300,380,'rgba(255,106,138,.14)']]) { const rad = g.createRadialGradient(x,y,0,x,y,r); rad.addColorStop(0,col); rad.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle = rad; g.fillRect(0,0,W,H); }
+  g.strokeStyle = 'rgba(200,215,255,.10)'; g.lineWidth = 2; for (let i=0;i<140;i++){ const x = Math.random()*W, y = Math.random()*H, l = 20 + Math.random()*50; g.beginPath(); g.moveTo(x,y); g.lineTo(x-6,y+l); g.stroke(); }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '700 120px "Gowun Batang", serif'; g.shadowColor = '#ff6a8a'; g.shadowBlur = 40; g.fillStyle = '#ffd6e0'; g.fillText('혼 잔', W/2, 210); g.shadowBlur = 0;
+  g.font = '500 34px "Noto Sans KR", sans-serif'; g.fillStyle = 'rgba(255,243,230,.75)'; g.fillText('혼자 와도 혼자가 아닌 바', W/2, 305);
+  // paper
+  const rows = [...R.head, null, ...R.drinks, ...(R.extra.length ? [null, ...R.extra] : []), null, ['머문 시간', R.mins + '분']];
+  const PX = 150, PW = W - 300, PY = 400, lineH = 58, PH = 290 + rows.length*lineH + 230;
+  g.save(); g.translate(W/2, PY + PH/2); g.rotate(-.018); g.translate(-W/2, -(PY + PH/2));
+  g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 40; g.shadowOffsetY = 16; g.fillStyle = '#fbf8f1';
+  g.beginPath(); g.moveTo(PX,PY); g.lineTo(PX+PW,PY); for (let x = PX+PW; x > PX; x -= 30) { g.lineTo(x-15, PY+PH+12); g.lineTo(x-30, PY+PH); } g.closePath(); g.fill(); g.shadowColor = 'transparent';
+  g.fillStyle = '#2b2522'; g.font = '700 64px "Gowun Batang", serif'; g.fillText('혼   잔', W/2, PY + 95);
+  g.font = '500 28px "Noto Sans KR", sans-serif'; g.fillStyle = '#7a6e66'; g.fillText(`골목 끝 작은 바 · ${ROOM}호점${R.weather ? ' · 바깥은 ' + R.weather : ''}`, W/2, PY + 160);
+  let y = PY + 230; const dash = () => { g.strokeStyle = '#b9aea4'; g.setLineDash([10,10]); g.lineWidth = 2; g.beginPath(); g.moveTo(PX+50, y); g.lineTo(PX+PW-50, y); g.stroke(); g.setLineDash([]); y += 34; };
+  dash();
+  for (const r of rows) { if (!r) { dash(); continue; } g.textAlign = 'left'; g.fillStyle = '#2b2522'; g.font = '500 34px "Noto Sans KR", sans-serif'; g.fillText(r[0], PX+60, y+10); g.textAlign = 'right'; g.font = '34px "Courier New", monospace'; let v = String(r[1]); while (g.measureText(v).width > PW-380 && v.length > 4) v = v.slice(0,-2) + '…'; g.fillText(v, PX+PW-60, y+10); y += lineH; }
+  dash();
+  g.textAlign = 'left'; g.font = '700 40px "Noto Sans KR", sans-serif'; g.fillText('합계', PX+60, y+14); g.textAlign = 'right'; g.fillText('오늘도 수고했어요', PX+PW-60, y+14); y += 80;
+  dash();
+  g.textAlign = 'center'; g.font = '64px "Nanum Pen Script", cursive'; g.fillStyle = '#3b2e2a'; g.fillText('조심히 들어가요 🌙', W/2, y + 40);
+  g.restore();
+  g.textAlign = 'center'; g.font = '500 34px "Noto Sans KR", sans-serif'; g.fillStyle = '#f0a865'; g.fillText('honjan.vercel.app', W/2, H - 150);
+  g.font = '500 26px "Noto Sans KR", sans-serif'; g.fillStyle = 'rgba(255,243,230,.6)'; g.fillText(({rain:'비 오는 밤', storm:'천둥 치는 밤', snow:'눈 오는 밤', clear:'달 밝은 밤', cloudy:'흐린 밤', fog:'안개 낀 밤'}[weather] || '비 오는 밤') + ', 골목 끝 작은 바에서 한 잔', W/2, H - 100);
+  return await new Promise(res => c.toBlob(res, 'image/png'));
+}
+$('storyBtn').onclick = async () => {
+  track('receipt_share_start');
+  const blob = await receiptImage(); if (!blob) { toast('이미지를 만들지 못했어요'); return; }
+  const file = new File([blob], 'honjan-receipt.png', {type:'image/png'});
+  try {
+    if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file]}); track('receipt_shared'); toast('공유 창에서 인스타그램 → 스토리를 골라요'); return; }
+  } catch(e) { if (e && e.name === 'AbortError') return; }
+  // 공유가 안 되는 환경: 이미지로 저장
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'honjan-receipt.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('이미지를 저장했어요 · 인스타 스토리에 올려봐요'); track('receipt_saved'); }
+  catch(e) { toast('캡처해서 올려주세요 📸'); }
+};
 $('byeBtn').onclick = () => { $('receipt').classList.remove('open'); if (me.seat !== null) { me.leaveSeat(); renderVisitors(); sendState(true); } me.walkTo(rand(1,3), FRONT_Z); toast('또 와요 🥃'); track('receipt_bye'); };
 $('napkinSave').onclick = () => {
   const t = $('napkinInput').value.trim().slice(0,28);
@@ -1018,7 +1110,7 @@ document.addEventListener('click', e => { if (!e.target.closest('#actions')) { d
 
 /* ---------- realtime ---------- */
 let netStatus = ONLINE ? 'connecting' : 'demo';
-function updateLabel(){ const wide = innerWidth > 640; $('subLbl').textContent = !ONLINE ? (wide ? '데모 · 1호점 ▾' : '1호점 ▾') : netStatus === 'online' ? ROOM + (wide ? '호점 · 마감 02:00 ▾' : '호점 ▾') : netStatus === 'offline' ? '연결이 끊겼어요' : '불 켜는 중…'; $('proto').style.display = ONLINE ? 'none' : ''; }
+function updateLabel(){ const wide = innerWidth > 640, wx = (typeof WX !== 'undefined' && WX[weather]) ? WX[weather].emoji + ' ' : ''; $('subLbl').textContent = wx + (!ONLINE ? (wide ? '데모 · 1호점 ▾' : '1호점 ▾') : netStatus === 'online' ? ROOM + (wide ? '호점 · 마감 02:00 ▾' : '호점 ▾') : netStatus === 'offline' ? '연결이 끊겼어요' : '불 켜는 중…'); $('proto').style.display = ONLINE ? 'none' : ''; }
 function makeTransport(h){
   if (LOCAL_TEST) { const bc = new BroadcastChannel('honjan-' + ROOM); bc.onmessage = e => { const m = e.data || {}; if (m.ev === 'leave') h.leave(m.p.id); else if (h[m.ev]) h[m.ev](m.p); }; addEventListener('pagehide', () => bc.postMessage({ev:'leave', p:{id:myId}})); setTimeout(() => h.status('online'), 50); return {send:(ev,p) => bc.postMessage({ev,p}), switchRoom(){}}; }
   // 로비 채널: 각 가게에 몇 명 있는지 다 같이 알아요 → 꽉 찬 가게는 건너뛰고 들어가요
@@ -1062,7 +1154,7 @@ function renderRooms(){
 $('roomNote').textContent = '한 가게에 ' + SEATS.length + '자리예요. 꽉 차면 다음 가게로 안내해요.';
 $('subLbl').onclick = () => { const o = $('rooms').classList.contains('open'); closePanels(); if (!o) { renderRooms(); $('rooms').classList.add('open'); } };
 $('roomList').onclick = e => { const b = e.target.closest('button[data-room]'); if (!b || b.disabled || !net) return; const r = b.dataset.room; if (r === ROOM) return; $('rooms').classList.remove('open'); net.switchRoom(r); toast('🚪 ' + r + '호점으로 옮겼어요'); track('room_switch', {room:r}); };
-function myState(){ const s = {id:myId, name:myName, look:myLook, x:+me.pos.x.toFixed(2), z:+me.pos.z.toFixed(2), seat:me.seat, drink:me.drink, pose:me.pose, lv:+me.level.toFixed(2), nap:me.napkin, bk:me.book}; if (me.target) { s.tx = +me.target.x.toFixed(2); s.tz = +me.target.z.toFixed(2); } return s; }
+function myState(){ const s = {id:myId, name:myName, look:myLook, x:+me.pos.x.toFixed(2), z:+me.pos.z.toFixed(2), seat:me.seat, drink:me.drink, pose:me.pose, lv:+me.level.toFixed(2), nap:me.napkin, bk:me.book, rg:regular.visits >= 3 ? 1 : 0}; if (me.target) { s.tx = +me.target.x.toFixed(2); s.tz = +me.target.z.toFixed(2); } return s; }
 let lastSent = -99, lastSig = '';
 function sendState(force){
   if (!net || netStatus !== 'online') return; const st = myState(), sig = [st.seat, st.drink, st.pose, st.lv, st.nap, st.tx, st.tz, st.bk].join('|');
@@ -1076,6 +1168,7 @@ const net = ONLINE ? makeTransport({
     let r = remotes.get(p.id);
     if (!r) { if (remotes.size >= 20) return; r = new Person(String(p.name || '손님').slice(0,20), false, sanitizeLook(p.look), p.id); r.pos.set(p.x,0,p.z); remotes.set(p.id, r); renderVisitors(); sendState(true); }
     r.lastSeen = now;
+    const star = p.rg ? ' ⭐' : ''; if (r.star !== star) { r.star = star; r.lbl.textContent = r.name + star; }
     const seat = Number.isInteger(p.seat) && p.seat >= 0 && p.seat < SEATS.length ? p.seat : null;
     if (seat !== r.seat) {
       if (r.seat !== null) { setNapkin(r.seat, null); const s = SEATS[r.seat]; if (s.taken === r) s.taken = null; }
@@ -1128,7 +1221,7 @@ cvs.addEventListener('pointerup', e => {
     if (s.taken && s.taken !== me) { toast('누가 앉아 있어요'); return; }
     if (me.seat === s.i) return;
     if (drawing) endDraw(); $('readBar').classList.remove('on');
-    me.sit(s.i); me.onSat = () => { aimSeat(s); if (!me.drink) me.setDrink(myDrink); stats.orders[me.drink] = (stats.orders[me.drink]||0) + 1; pour(); toast('🥃 ' + DRINKS[myDrink].name + ' 나왔어요'); renderVisitors(); sendState(true); track('sit', {seat:s.i}); };
+    me.sit(s.i); me.onSat = () => { aimSeat(s); const fav = favDrink(); if (!me.drink) me.setDrink(fav || myDrink); stats.orders[me.drink] = (stats.orders[me.drink]||0) + 1; regular.drinks[me.drink] = (regular.drinks[me.drink]||0) + 1; saveMe(); if (fav && !stats.greeted) { stats.greeted = true; bartender.temp('standCheers', 1.2); setTimeout(() => toast('바텐더: 늘 마시던 ' + DRINKS[fav].name + '요 🥃'), 900); } pour(); toast('🥃 ' + DRINKS[myDrink].name + ' 나왔어요'); renderVisitors(); sendState(true); track('sit', {seat:s.i}); };
     renderVisitors(); return;
   }
   if (o.userData.owner) { o.userData.owner.showName(); return; }
@@ -1189,10 +1282,11 @@ function tick(){
   if (now - lastList > 2) { renderVisitors(); lastList = now; }
   requestAnimationFrame(tick);
 }
-renderVisitors(); tick();
+renderVisitors(); tick(); loadWeather();
 setTimeout(() => { $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 1300); }, 900);
 setTimeout(() => $('hint').style.opacity = 0, 9000);
-window.__bar = {aimSeat, me, npcs, SEATS, setNapkin, cat, fogStroke, heartPts, openReceipt, startDraw, stats, setYaw:v=>yaw=v, setDist:v=>dist=v, setPitch:v=>pitch=v};
+setTimeout(() => { const v = regular.visits; toast(v <= 1 ? '어서 와요, 처음이시죠? 🌙' : v >= 3 ? '⭐ 단골 손님 · ' + v + '번째 방문이에요' : '또 왔네요 · ' + v + '번째 방문'); track('visit', {n: v}); }, 1600);
+window.__bar = {receiptImage, regular, setWeather:w=>{weather=w; applyWeather();}, aimSeat, me, npcs, SEATS, setNapkin, cat, fogStroke, heartPts, openReceipt, startDraw, stats, setYaw:v=>yaw=v, setDist:v=>dist=v, setPitch:v=>pitch=v};
 })();
 </script>
 </body>
