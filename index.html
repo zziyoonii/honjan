@@ -190,7 +190,7 @@
 <div id="rooms" class="panel">
   <h3>골목의 혼잔 <button data-close="rooms" aria-label="닫기">×</button></h3>
   <div id="roomList"></div>
-  <p style="margin-top:8px">한 가게에 20자리예요. 꽉 차면 다음 가게로 안내해요.</p>
+  <p style="margin-top:8px" id="roomNote">꽉 차면 다음 가게로 안내해요.</p>
 </div>
 <div id="receipt" class="panel">
   <div class="paper" id="receiptPaper"></div>
@@ -228,7 +228,7 @@ const pick = a => a[Math.floor(Math.random()*a.length)];
 const params = new URLSearchParams(location.search);
 const ROOM_PARAM = (params.get('room') || '').replace(/[^0-9]/g,'').slice(0,3);
 let ROOM = ROOM_PARAM || '1';
-const ROOM_CAP = 20;
+let ROOM_CAP = 20;
 let roomCounts = {};
 const LOCAL_TEST = params.has('localtest');
 const ONLINE = LOCAL_TEST || !!(SUPABASE_URL && SUPABASE_KEY);
@@ -381,9 +381,11 @@ function table2(tx,tz){
     addSeat({x:cx, z:tz, face, h:.5, kind:'table', d:.42, sy:.76, meshes:[seat, back, ...legs]});
   }
 }
-table2(-2.1,3.1); table2(1.6,4.3);
+table2(-2.1,3.1); table2(1.6,4.3); table2(-2.7,5.9); table2(.5,6.3); table2(3.5,6.0);
 // 테이블 쪽 은은한 조명 (촛불)
 const candleLight = new THREE.PointLight('#ffb064', .7, 5, 2); candleLight.position.set(-.2,1.3,3.7); scene.add(candleLight);
+const candleLight2 = new THREE.PointLight('#ffb064', .6, 5, 2); candleLight2.position.set(.4,1.3,6.1); scene.add(candleLight2);
+const rug3 = new THREE.Mesh(new THREE.PlaneGeometry(8.4,2.4), new THREE.MeshStandardMaterial({map:canvasTex(256,96,(g,w,h)=>{ g.fillStyle='#3a2622'; g.fillRect(0,0,w,h); g.strokeStyle='#8a6a4a'; g.lineWidth=3; g.strokeRect(6,6,w-12,h-12); }), roughness:1})); rug3.rotation.x = -Math.PI/2; rug3.position.set(.3,.003,6.1); rug3.receiveShadow = true; scene.add(rug3);
 
 // 소파 코너 (오른쪽 벽)
 const velvet = mat('#2f4a3e',{roughness:.95}), velvet2 = mat('#3a5a4c',{roughness:.95});
@@ -407,31 +409,32 @@ const rug2 = new THREE.Mesh(new THREE.PlaneGeometry(5.6,3.2), new THREE.MeshStan
 const pole = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.6,6), metalM); pole.position.set(5.45,.8,4.15); scene.add(pole);
 const fshade = new THREE.Mesh(new THREE.CylinderGeometry(.16,.24,.3,20,1,true), mat('#efe0c4',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.6})); fshade.position.set(5.45,1.7,4.15); scene.add(fshade);
 const floorLamp = new THREE.PointLight('#ffc27a', 1.1, 6, 2); floorLamp.position.set(5.3,1.6,3.9); scene.add(floorLamp);
-// 책 코너: 바 오른쪽 끝, 오른쪽 벽 책장 앞 (기본 시점에서 한눈에 보여요)
-box(.32,2.2,1.5,woodDark,5.72,1.1,-1.3);
+// 책 코너: 창가 선반 바로 옆, 왼쪽 벽 책장 앞
+box(.32,2.2,1.5,woodDark,-5.72,1.1,3.75);
 const BOOK = ['#7a2a2a','#2a4a6a','#c9a04a','#3a5a3a','#d8d0c0','#5a3a6a','#8a5a3a'];
-for (const y of [.35,.95,1.55]) { box(.3,.04,1.42,wood,5.7,y-.04,-1.3,false); let z = -1.98; while (z < -.65) { const bw = rand(.05,.09), bh = rand(.32,.46); const b = box(.22,bh,bw,mat(pick(BOOK),{roughness:.8}),5.68,y+bh/2-.02,z+bw/2,false); if (Math.random()<.12) b.rotation.x = .25; z += bw + .008; } }
+for (const y of [.35,.95,1.55]) { box(.3,.04,1.42,wood,-5.7,y-.04,3.75,false); let z = 3.07; while (z < 4.4) { const bw = rand(.05,.09), bh = rand(.32,.46); const b = box(.22,bh,bw,mat(pick(BOOK),{roughness:.8}),-5.68,y+bh/2-.02,z+bw/2,false); if (Math.random()<.12) b.rotation.x = .25; z += bw + .008; } }
 const armM = mat('#8a5a3a',{roughness:.9}), armM2 = mat('#9a6a48',{roughness:.9});
-function armchair(x,z){   // 방 쪽(-x)을 보고 앉아요
-  box(.66,.3,.66,armM,x,.2,z); box(.58,.1,.58,armM2,x-.02,.4,z);
-  box(.14,.62,.66,armM,x+.3,.55,z); box(.66,.42,.12,armM,x,.48,z-.3); box(.66,.42,.12,armM,x,.48,z+.3);
+function armchair(x,z){   // 가게 안쪽(+x)을 보고 앉아요
+  box(.66,.3,.66,armM,x,.2,z); box(.58,.1,.58,armM2,x+.02,.4,z);
+  box(.14,.62,.66,armM,x-.3,.55,z); box(.66,.42,.12,armM,x,.48,z-.3); box(.66,.42,.12,armM,x,.48,z+.3);
   const hit = new THREE.Mesh(new THREE.BoxGeometry(.66,.6,.66), new THREE.MeshBasicMaterial({visible:false})); hit.position.set(x,.35,z); scene.add(hit);
-  addSeat({x:x-.06, z, face:-Math.PI/2, h:.44, kind:'read', d:0, sy:.63, spot:[x-.05, -.35], meshes:[hit]});
+  addSeat({x:x+.06, z, face:Math.PI/2, h:.44, kind:'read', d:0, sy:.63, spot:[x+.05, 3.75], meshes:[hit]});
 }
-armchair(4.95,-.95); armchair(4.95,.25);
-box(.42,.04,.42,woodDark,4.9,.6,-.35); box(.06,.58,.06,woodDark,4.9,.3,-.35);
-const stack = [['#7a2a2a',.03],['#2a4a6a',.025],['#c9a04a',.035]]; let sy0 = .62; for (const [c,h] of stack) { const b = box(.22,h,.16,mat(c,{roughness:.8}),4.92,sy0+h/2,-.38,false); b.rotation.y = rand(-.3,.3); sy0 += h; }
-const rpole = new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.5,6), metalM); rpole.position.set(5.45,.75,-.35); scene.add(rpole);
-const rarm = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.5,6), metalM); rarm.rotation.z = -Math.PI/2.6; rarm.position.set(5.25,1.55,-.35); scene.add(rarm);
-const rshade = new THREE.Mesh(new THREE.ConeGeometry(.12,.16,16,1,true), mat('#2f4a3e',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.25})); rshade.position.set(5.05,1.55,-.35); scene.add(rshade);
-const readLight = new THREE.SpotLight('#ffd49a', 1.6, 4, Math.PI/4, .6, 2); readLight.position.set(5.05,1.5,-.35); readLight.target.position.set(4.7,.5,-.35); scene.add(readLight); scene.add(readLight.target);
+armchair(-4.95,3.15); armchair(-4.95,4.35);
+box(.42,.04,.42,woodDark,-4.9,.6,3.75); box(.06,.58,.06,woodDark,-4.9,.3,3.75);
+const stack = [['#7a2a2a',.03],['#2a4a6a',.025],['#c9a04a',.035]]; let sy0 = .62; for (const [c,h] of stack) { const b = box(.22,h,.16,mat(c,{roughness:.8}),-4.92,sy0+h/2,3.72,false); b.rotation.y = rand(-.3,.3); sy0 += h; }
+const rpole = new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.5,6), metalM); rpole.position.set(-5.45,.75,3.75); scene.add(rpole);
+const rarm = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.5,6), metalM); rarm.rotation.z = Math.PI/2.6; rarm.position.set(-5.25,1.55,3.75); scene.add(rarm);
+const rshade = new THREE.Mesh(new THREE.ConeGeometry(.12,.16,16,1,true), mat('#2f4a3e',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.25})); rshade.position.set(-5.05,1.55,3.75); scene.add(rshade);
+const readLight = new THREE.SpotLight('#ffd49a', 1.6, 4, Math.PI/4, .6, 2); readLight.position.set(-5.05,1.5,3.75); readLight.target.position.set(-4.7,.5,3.75); scene.add(readLight); scene.add(readLight.target);
 // 오른쪽 벽 액자 두 점
 function frame(z, draw){ const t = canvasTex(200,260,draw); const f = new THREE.Mesh(new THREE.PlaneGeometry(.7,.9), new THREE.MeshStandardMaterial({map:t, roughness:.9})); f.rotation.y = -Math.PI/2; f.position.set(5.86,2.25,z); scene.add(f); box(.03,.98,.78,mat('#1a1214'),5.88,2.25,z,false); }
 frame(1.5,(g,w,h)=>{ g.fillStyle='#e9dcc4'; g.fillRect(0,0,w,h); g.fillStyle='#c9673e'; g.beginPath(); g.arc(w/2,h*.42,52,0,Math.PI*2); g.fill(); g.fillStyle='#2f4a3e'; g.fillRect(0,h*.62,w,h*.38); g.fillStyle='#3a5a4c'; g.fillRect(0,h*.7,w,h*.3); });
 frame(2.9,(g,w,h)=>{ g.fillStyle='#1d2340'; g.fillRect(0,0,w,h); g.fillStyle='#f0d8a0'; g.beginPath(); g.arc(w*.68,h*.28,22,0,Math.PI*2); g.fill(); g.fillStyle='#e9e2d0'; for (let i=0;i<40;i++) g.fillRect(Math.random()*w,Math.random()*h*.6,1.5,1.5); g.fillStyle='#0e1220'; g.beginPath(); g.moveTo(0,h); g.lineTo(w*.3,h*.6); g.lineTo(w*.55,h*.8); g.lineTo(w*.8,h*.55); g.lineTo(w,h*.75); g.lineTo(w,h); g.fill(); });
+ROOM_CAP = SEATS.length;
 // 큰 화분
 function bigPlant(x,z){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(.22,.17,.42,14), mat('#3a2a24',{roughness:.6})); pot.position.set(x,.21,z); pot.castShadow = true; scene.add(pot); for (let i=0;i<9;i++){ const leaf = new THREE.Mesh(new THREE.SphereGeometry(.22,10,6), mat(pick(['#3f5f36','#4f6d40','#5f7f4c']),{roughness:.8})); leaf.scale.set(1,.25,.6); const a = i/9*Math.PI*2; leaf.position.set(x+Math.cos(a)*.25, .7+rand(0,.6), z+Math.sin(a)*.25); leaf.rotation.set(rand(-.6,.6), a, rand(-.4,.4)); leaf.castShadow = true; scene.add(leaf); } }
-bigPlant(-5.3,-1.15); bigPlant(3.15,4.4); bigPlant(-5.2,3.9); bigPlant(-5.3,7.2); bigPlant(5.3,7.2);
+bigPlant(-5.3,-1.15); bigPlant(3.15,4.4); bigPlant(5.3,-.9); bigPlant(-5.3,7.2); bigPlant(5.3,7.2);
 // 천장 전구 줄
 for (const zz of [1.2,3.0,4.8,6.6]) { for (let i=0;i<=18;i++){ const t = i/18, x = -5.6 + t*11.2, y = 3.75 - Math.sin(t*Math.PI)*.35; const bulb = new THREE.Mesh(new THREE.SphereGeometry(.035,8,6), new THREE.MeshBasicMaterial({color:lin(i%3 ? '#ffd9a0' : '#ffb870')})); bulb.position.set(x,y,zz); scene.add(bulb); } }
 // LP turntable at counter end
@@ -447,7 +450,7 @@ const pot = new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,.2,12), mat('#8a5a3
 for (let i=0;i<4;i++){ const l = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(.1,.15),0), mat('#4f6d40',{flatShading:true})); l.position.set(-4.6+rand(-.08,.08),1.35+rand(0,.12),BAR_Z+rand(-.08,.08)); scene.add(l); }
 const boardTex = canvasTex(256,320,(g,w,h)=>{ g.fillStyle='#1b201c'; g.fillRect(0,0,w,h); g.strokeStyle='#6b4a30'; g.lineWidth=14; g.strokeRect(0,0,w,h); g.fillStyle='#e9e2d0'; g.font='30px "Nanum Pen Script", cursive'; g.textAlign='center'; g.fillText('오늘의 메뉴',w/2,52); g.font='26px "Nanum Pen Script", cursive'; ['소주','하이볼','생맥주','레드 와인','따뜻한 보리차','무알콜 하이볼'].forEach((t,i)=>g.fillText(t,w/2,104+i*36)); });
 const board = new THREE.Mesh(new THREE.PlaneGeometry(.9,1.12), new THREE.MeshStandardMaterial({map:boardTex, roughness:.9}));
-board.position.set(-5.88,2.2,-2.3); board.rotation.y = Math.PI/2; scene.add(board);
+board.position.set(5.88,2.0,-.9); board.rotation.y = -Math.PI/2; scene.add(board);
 // door area hint light
 
 /* ---------- drinks ---------- */
@@ -1056,6 +1059,7 @@ function renderRooms(){
   for (let i=1;i<=Math.min(max, 20);i++) { const n = ONLINE ? (roomCounts[i]||0) : (i === 1 ? everyone().length : 0); const full = n >= ROOM_CAP && String(i) !== ROOM; html += `<button data-room="${i}" class="${String(i)===ROOM?'sel':''}" ${full || !ONLINE ? 'disabled' : ''}>혼잔 ${i}호점<small>${String(i)===ROOM ? '지금 여기 · ' : ''}${full ? '가득 찼어요' : n + '/' + ROOM_CAP}</small></button>`; }
   $('roomList').innerHTML = html + (ONLINE ? '' : '<p>데모에서는 1호점만 열려 있어요.</p>');
 }
+$('roomNote').textContent = '한 가게에 ' + SEATS.length + '자리예요. 꽉 차면 다음 가게로 안내해요.';
 $('subLbl').onclick = () => { const o = $('rooms').classList.contains('open'); closePanels(); if (!o) { renderRooms(); $('rooms').classList.add('open'); } };
 $('roomList').onclick = e => { const b = e.target.closest('button[data-room]'); if (!b || b.disabled || !net) return; const r = b.dataset.room; if (r === ROOM) return; $('rooms').classList.remove('open'); net.switchRoom(r); toast('🚪 ' + r + '호점으로 옮겼어요'); track('room_switch', {room:r}); };
 function myState(){ const s = {id:myId, name:myName, look:myLook, x:+me.pos.x.toFixed(2), z:+me.pos.z.toFixed(2), seat:me.seat, drink:me.drink, pose:me.pose, lv:+me.level.toFixed(2), nap:me.napkin, bk:me.book}; if (me.target) { s.tx = +me.target.x.toFixed(2); s.tz = +me.target.z.toFixed(2); } return s; }
@@ -1097,9 +1101,9 @@ const net = ONLINE ? makeTransport({
 updateLabel();
 
 /* ---------- camera & input ---------- */
-let yaw = 0, pitch = .42, dist = 7;
+let yaw = 0, pitch = .5, dist = 7;
 function fitCamera(){ const portrait = innerWidth/innerHeight < .85; camera.fov = portrait ? 72 : 52; camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
-fitCamera(); if (innerWidth/innerHeight < .85) { dist = 7; pitch = .5; }
+fitCamera(); if (innerWidth/innerHeight < .85) { dist = 7; pitch = .62; }
 if (IS_TOUCH) $('hint').textContent = '빈 의자를 톡 눌러 앉아요 · 밀어서 둘러보기';
 const keys = {}; addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; keys[e.key.toLowerCase()] = true; if (e.key === '1') $('cheersBtn').click(); if (e.key === '2') $('sipBtn').click(); });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
