@@ -258,18 +258,18 @@ function box(w,h,d,m,x,y,z,cast=true){ const b = new THREE.Mesh(new THREE.BoxGeo
 function canvasTex(w,h,draw){ const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; }
 
 /* ---------- room ---------- */
-const ROOM_W = 12, ROOM_D = 9, BAR_Z = -2.0;
+const ROOM_W = 12, ROOM_D = 12, BAR_Z = -2.0, ROOM_CZ = 2.0, FRONT_Z = 7.4;
 const walkables = [];
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_W, ROOM_D), new THREE.MeshStandardMaterial({map: canvasTex(512,512,(g,w,h)=>{ g.fillStyle='#3a261d'; g.fillRect(0,0,w,h); for(let i=0;i<16;i++){ g.fillStyle = i%2 ? '#3f2a20' : '#34221a'; g.fillRect(0,i*32,w,31); g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(0,i*32+31,w,1);} for(let i=0;i<400;i++){ g.fillStyle='rgba(255,220,180,.025)'; g.fillRect(Math.random()*w,Math.random()*h,Math.random()*60,1);} }), roughness:.7}));
 floor.material.map.wrapS = floor.material.map.wrapT = THREE.RepeatWrapping; floor.material.map.repeat.set(2,2);
-floor.rotation.x = -Math.PI/2; floor.position.set(0,0,.5); floor.receiveShadow = true; scene.add(floor); walkables.push(floor);
+floor.rotation.x = -Math.PI/2; floor.position.set(0,0,ROOM_CZ); floor.receiveShadow = true; scene.add(floor); walkables.push(floor);
 const wallM = mat('#2b3a33',{roughness:.95}), wallM2 = mat('#3a2a26',{roughness:.95});
 box(ROOM_W,4,.2,wallM,0,2,-4);                 // back wall
-box(.2,4,ROOM_D,wallM2,-6,2,.5);               // left wall (window)
-box(.2,4,ROOM_D,wallM2,6,2,.5);                // right wall
-box(ROOM_W,.2,ROOM_D,mat('#1c1416'),0,4,.5,false); // ceiling
+box(.2,4,ROOM_D,wallM2,-6,2,ROOM_CZ);               // left wall (window)
+box(.2,4,ROOM_D,wallM2,6,2,ROOM_CZ);                // right wall
+box(ROOM_W,.2,ROOM_D,mat('#1c1416'),0,4,ROOM_CZ,false); // ceiling
 // wainscot
-box(ROOM_W,1,.06,mat('#4a2e22'),0,.5,-3.88); box(.06,1,ROOM_D,mat('#4a2e22'),-5.88,.5,.5); box(.06,1,ROOM_D,mat('#4a2e22'),5.88,.5,.5);
+box(ROOM_W,1,.06,mat('#4a2e22'),0,.5,-3.88); box(.06,1,ROOM_D,mat('#4a2e22'),-5.88,.5,ROOM_CZ); box(.06,1,ROOM_D,mat('#4a2e22'),5.88,.5,ROOM_CZ);
 
 // bar counter
 const wood = mat('#6b3f27',{roughness:.45}), woodDark = mat('#3f2418',{roughness:.6});
@@ -381,9 +381,9 @@ function table2(tx,tz){
     addSeat({x:cx, z:tz, face, h:.5, kind:'table', d:.42, sy:.76, meshes:[seat, back, ...legs]});
   }
 }
-table2(-1.8,2.3); table2(1.4,2.7);
+table2(-2.1,3.1); table2(1.6,4.3);
 // 테이블 쪽 은은한 조명 (촛불)
-const candleLight = new THREE.PointLight('#ffb064', .7, 5, 2); candleLight.position.set(-.2,1.3,2.5); scene.add(candleLight);
+const candleLight = new THREE.PointLight('#ffb064', .7, 5, 2); candleLight.position.set(-.2,1.3,3.7); scene.add(candleLight);
 
 // 소파 코너 (오른쪽 벽)
 const velvet = mat('#2f4a3e',{roughness:.95}), velvet2 = mat('#3a5a4c',{roughness:.95});
@@ -402,7 +402,7 @@ box(.7,.05,2.6,mat('#4a2c1e',{roughness:.4}),4.12,.45,2.2); for (const [dx,dz] o
 candle(4.0,.47,2.5);
 const rugTex = canvasTex(256,256,(g,w,h)=>{ g.fillStyle='#7a3a2a'; g.fillRect(0,0,w,h); g.strokeStyle='#c9873e'; g.lineWidth=8; g.strokeRect(14,14,w-28,h-28); g.lineWidth=3; g.strokeRect(30,30,w-60,h-60); g.fillStyle='#c9873e'; for (let i=0;i<5;i++){ g.save(); g.translate(w/2,h/2); g.rotate(i*Math.PI/5); g.fillRect(-4,-60,8,120); g.restore(); } });
 const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.2,3.2), new THREE.MeshStandardMaterial({map:rugTex, roughness:1})); rug.rotation.x = -Math.PI/2; rug.position.set(4.6,.005,2.2); rug.receiveShadow = true; scene.add(rug);
-const rug2 = new THREE.Mesh(new THREE.PlaneGeometry(4.6,2.2), new THREE.MeshStandardMaterial({map:canvasTex(256,128,(g,w,h)=>{ g.fillStyle='#2a2e3a'; g.fillRect(0,0,w,h); g.strokeStyle='#8a7a5a'; g.lineWidth=4; g.strokeRect(8,8,w-16,h-16); }), roughness:1})); rug2.rotation.x = -Math.PI/2; rug2.position.set(-.2,.004,2.5); rug2.receiveShadow = true; scene.add(rug2);
+const rug2 = new THREE.Mesh(new THREE.PlaneGeometry(5.6,3.2), new THREE.MeshStandardMaterial({map:canvasTex(256,128,(g,w,h)=>{ g.fillStyle='#2a2e3a'; g.fillRect(0,0,w,h); g.strokeStyle='#8a7a5a'; g.lineWidth=4; g.strokeRect(8,8,w-16,h-16); }), roughness:1})); rug2.rotation.x = -Math.PI/2; rug2.position.set(-.2,.004,3.7); rug2.receiveShadow = true; scene.add(rug2);
 // 스탠드 조명
 const pole = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.6,6), metalM); pole.position.set(5.45,.8,4.15); scene.add(pole);
 const fshade = new THREE.Mesh(new THREE.CylinderGeometry(.16,.24,.3,20,1,true), mat('#efe0c4',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.6})); fshade.position.set(5.45,1.7,4.15); scene.add(fshade);
@@ -431,9 +431,9 @@ frame(1.5,(g,w,h)=>{ g.fillStyle='#e9dcc4'; g.fillRect(0,0,w,h); g.fillStyle='#c
 frame(2.9,(g,w,h)=>{ g.fillStyle='#1d2340'; g.fillRect(0,0,w,h); g.fillStyle='#f0d8a0'; g.beginPath(); g.arc(w*.68,h*.28,22,0,Math.PI*2); g.fill(); g.fillStyle='#e9e2d0'; for (let i=0;i<40;i++) g.fillRect(Math.random()*w,Math.random()*h*.6,1.5,1.5); g.fillStyle='#0e1220'; g.beginPath(); g.moveTo(0,h); g.lineTo(w*.3,h*.6); g.lineTo(w*.55,h*.8); g.lineTo(w*.8,h*.55); g.lineTo(w,h*.75); g.lineTo(w,h); g.fill(); });
 // 큰 화분
 function bigPlant(x,z){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(.22,.17,.42,14), mat('#3a2a24',{roughness:.6})); pot.position.set(x,.21,z); pot.castShadow = true; scene.add(pot); for (let i=0;i<9;i++){ const leaf = new THREE.Mesh(new THREE.SphereGeometry(.22,10,6), mat(pick(['#3f5f36','#4f6d40','#5f7f4c']),{roughness:.8})); leaf.scale.set(1,.25,.6); const a = i/9*Math.PI*2; leaf.position.set(x+Math.cos(a)*.25, .7+rand(0,.6), z+Math.sin(a)*.25); leaf.rotation.set(rand(-.6,.6), a, rand(-.4,.4)); leaf.castShadow = true; scene.add(leaf); } }
-bigPlant(-5.3,-1.15); bigPlant(3.15,4.25); bigPlant(-5.2,3.9);
+bigPlant(-5.3,-1.15); bigPlant(3.15,4.4); bigPlant(-5.2,3.9); bigPlant(-5.3,7.2); bigPlant(5.3,7.2);
 // 천장 전구 줄
-for (const zz of [1.2,3.0]) { for (let i=0;i<=18;i++){ const t = i/18, x = -5.6 + t*11.2, y = 3.75 - Math.sin(t*Math.PI)*.35; const bulb = new THREE.Mesh(new THREE.SphereGeometry(.035,8,6), new THREE.MeshBasicMaterial({color:lin(i%3 ? '#ffd9a0' : '#ffb870')})); bulb.position.set(x,y,zz); scene.add(bulb); } }
+for (const zz of [1.2,3.0,4.8,6.6]) { for (let i=0;i<=18;i++){ const t = i/18, x = -5.6 + t*11.2, y = 3.75 - Math.sin(t*Math.PI)*.35; const bulb = new THREE.Mesh(new THREE.SphereGeometry(.035,8,6), new THREE.MeshBasicMaterial({color:lin(i%3 ? '#ffd9a0' : '#ffb870')})); bulb.position.set(x,y,zz); scene.add(bulb); } }
 // LP turntable at counter end
 const lp = new THREE.Group(); lp.position.set(4.55,1.09,BAR_Z);
 const lpBase = new THREE.Mesh(new THREE.BoxGeometry(.5,.08,.42), mat('#2a1d18',{roughness:.4})); lp.add(lpBase);
@@ -785,7 +785,7 @@ function saveMe(){ try { localStorage.setItem('honjan-me', JSON.stringify({name:
 saveMe();
 const stats = {start: Date.now(), orders:{}, sips:0, cheers:0, napkins:0, pets:0, draws:0, books:new Set()};
 const me = new Person(myName, true, myLook, myId);
-me.pos.set(rand(-1,1),0,3.6); me.heading = Math.PI;
+me.pos.set(rand(-1,1),0,FRONT_Z - .8); me.heading = Math.PI;
 
 const bartender = new Person('바텐더', false, {skin:'#e8bf9c', hair:'#1f1c1f', top:'#f2ece2', pants:'#1f1c22'}, 'bartender', 'bartender');
 bartender.pos.set(0,0,-3.05); bartender.heading = 0; bartender.faceTo = 0; bartender.pose = 'wipe'; bartender.speed = 1.2;
@@ -800,7 +800,7 @@ function spawnNpc(atDoor){
   const free = SEATS.filter(s => !s.taken && s.taken !== me); if (!free.length) { n.remove(); return; }
   const s = pick(free);
   n.setDrink(pick(Object.keys(DRINKS)));
-  if (atDoor) { n.pos.set(rand(2,3.5),0,4.2); n.sit(s.i); }
+  if (atDoor) { n.pos.set(rand(1,3),0,FRONT_Z); n.sit(s.i); }
   else { s.taken = n; n.seat = s.i; n.pos.set(s.x,0,s.z); n.heading = s.face; n.faceTo = s.face; n.pose = pick(['sit','sit','chin','rest']); n.placeGlass(); }
   n.stayUntil = now + rand(60,180);
   npcs.push(n);
@@ -813,7 +813,7 @@ if (!ONLINE) {
 }
 function npcTick(n){
   if (n.target) return;
-  if (now > n.stayUntil && n.seat !== null) { n.leaveSeat(); n.walkTo(rand(2,3.5),4.3,() => { npcs.splice(npcs.indexOf(n),1); n.remove(); setTimeout(() => spawnNpc(true), rand(6000,20000)); }); return; }
+  if (now > n.stayUntil && n.seat !== null) { n.leaveSeat(); n.walkTo(rand(1,3),FRONT_Z,() => { npcs.splice(npcs.indexOf(n),1); n.remove(); setTimeout(() => spawnNpc(true), rand(6000,20000)); }); return; }
   if (now > n.nextAct && n.seat !== null) {
     const r = Math.random();
     const sk = SEATS[n.seat].kind;
@@ -997,7 +997,7 @@ function openReceipt(){
   $('receiptPaper').innerHTML = `<h4>혼 잔</h4><div class="c">골목 끝 작은 바 · ${ROOM}호점</div><hr>${L('일시', dateStr)}${L('손님', esc(myName))}${L('자리', seatName)}<hr>${drinks}${extra ? '<hr>' + extra : ''}<hr>${L('머문 시간', mins + '분')}<div class="l t"><span>합계</span><span>오늘도 수고했어요</span></div><hr><div class="bye">조심히 들어가요 🌙</div>`;
   $('receipt').classList.add('open'); track('receipt_open', {minutes: mins});
 }
-$('byeBtn').onclick = () => { $('receipt').classList.remove('open'); if (me.seat !== null) { me.leaveSeat(); renderVisitors(); sendState(true); } me.walkTo(rand(2,3.5), 4.3); toast('또 와요 🥃'); track('receipt_bye'); };
+$('byeBtn').onclick = () => { $('receipt').classList.remove('open'); if (me.seat !== null) { me.leaveSeat(); renderVisitors(); sendState(true); } me.walkTo(rand(1,3), FRONT_Z); toast('또 와요 🥃'); track('receipt_bye'); };
 $('napkinSave').onclick = () => {
   const t = $('napkinInput').value.trim().slice(0,28);
   me.napkin = t || null; setNapkin(me.seat, me.napkin, myName); $('napkinWrite').classList.remove('open'); sendState(true); if (t) stats.napkins++;
@@ -1109,7 +1109,7 @@ cvs.addEventListener('pointerdown', e => { if (drawing) { const uv = fogUV(e); i
 cvs.addEventListener('pointermove', e => { if (drawing && drawStroke) { const uv = fogUV(e); if (uv) { const last = drawStroke[drawStroke.length-1]; fogStroke([last, uv]); drawStroke.push(uv); drawSendBuf.push(uv); flushDraw(false); } e.stopImmediatePropagation(); } }, true);
 cvs.addEventListener('pointerup', e => { if (drawing && drawStroke) { drawStroke = null; flushDraw(true); drawSendBuf = []; e.stopImmediatePropagation(); } }, true);
 cvs.addEventListener('pointerdown', e => { if (drawing && drawStroke) return; closePanels(); cvs.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); drag = {x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false}; if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; pinch = Math.hypot(a.x-b.x,a.y-b.y); } });
-cvs.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; const d = Math.hypot(a.x-b.x,a.y-b.y); dist = THREE.MathUtils.clamp(dist*pinch/d, 2.5, 9); pinch = d; if (drag) drag.moved = true; return; } if (!drag) return; const dx = e.clientX-drag.x, dy = e.clientY-drag.y; drag.x = e.clientX; drag.y = e.clientY; if (Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) > (e.pointerType === 'touch' ? 12 : 6)) drag.moved = true; if (drag.moved) { yaw = THREE.MathUtils.clamp(yaw - dx*.006, -1.7, 1.7); pitch = THREE.MathUtils.clamp(pitch + dy*.004, .05, 1.0); } });
+cvs.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; const d = Math.hypot(a.x-b.x,a.y-b.y); dist = THREE.MathUtils.clamp(dist*pinch/d, 2.5, 9); pinch = d; if (drag) drag.moved = true; return; } if (!drag) return; const dx = e.clientX-drag.x, dy = e.clientY-drag.y; drag.x = e.clientX; drag.y = e.clientY; if (Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) > (e.pointerType === 'touch' ? 12 : 6)) drag.moved = true; if (drag.moved) { yaw = yaw - dx*.006; pitch = THREE.MathUtils.clamp(pitch + dy*.004, .05, 1.0); } });
 cvs.addEventListener('pointerup', e => {
   ptrs.delete(e.pointerId); if (!drag || drag.moved) { if (!ptrs.size) drag = null; return; }
   ray.setFromCamera(new THREE.Vector2((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1), camera);
@@ -1124,12 +1124,12 @@ cvs.addEventListener('pointerup', e => {
     if (s.taken && s.taken !== me) { toast('누가 앉아 있어요'); return; }
     if (me.seat === s.i) return;
     if (drawing) endDraw(); $('readBar').classList.remove('on');
-    me.sit(s.i); me.onSat = () => { if (!me.drink) me.setDrink(myDrink); stats.orders[me.drink] = (stats.orders[me.drink]||0) + 1; pour(); toast('🥃 ' + DRINKS[myDrink].name + ' 나왔어요'); renderVisitors(); sendState(true); track('sit', {seat:s.i}); };
+    me.sit(s.i); me.onSat = () => { aimSeat(s); if (!me.drink) me.setDrink(myDrink); stats.orders[me.drink] = (stats.orders[me.drink]||0) + 1; pour(); toast('🥃 ' + DRINKS[myDrink].name + ' 나왔어요'); renderVisitors(); sendState(true); track('sit', {seat:s.i}); };
     renderVisitors(); return;
   }
   if (o.userData.owner) { o.userData.owner.showName(); return; }
   if (o === floor) {
-    let {x,z} = h.point; x = THREE.MathUtils.clamp(x, -5.5, 5.5); z = THREE.MathUtils.clamp(z, BAR_Z + 1.5, 4.4);
+    let {x,z} = h.point; x = THREE.MathUtils.clamp(x, -5.5, 5.5); z = THREE.MathUtils.clamp(z, BAR_Z + 1.5, FRONT_Z);
     if (drawing) endDraw(); $('readBar').classList.remove('on');
     if (me.seat !== null) { me.leaveSeat(); renderVisitors(); }
     me.walkTo(x, z);
@@ -1139,6 +1139,10 @@ for (const o of bartender.m.parts) o.userData.owner = bartender;
 cvs.addEventListener('wheel', e => { e.preventDefault(); dist = THREE.MathUtils.clamp(dist*(1+Math.sign(e.deltaY)*.08), 2.5, 9); }, {passive:false});
 addEventListener('resize', () => { fitCamera(); renderer.setSize(innerWidth, innerHeight); });
 
+function aimSeat(s){
+  const front = s.kind === 'sofa' || s.kind === 'read';
+  yaw = front ? s.face + .45 : s.face + Math.PI + .35; pitch = front ? .22 : .3; dist = front ? 3.0 : 3.4;
+}
 /* ---------- closing time (02:00 KST) ---------- */
 function kst(){ const d = new Date(Date.now() + 9*3600e3); return {h:d.getUTCHours(), m:d.getUTCMinutes()}; }
 let closingShown = false;
@@ -1150,7 +1154,7 @@ let lastList = 0;
 function tick(){
   const dt = Math.min(.05, clock.getDelta()); now += dt;
   let fx = 0, fz = 0; if (keys.w||keys.arrowup) fz -= 1; if (keys.s||keys.arrowdown) fz += 1; if (keys.a||keys.arrowleft) fx -= 1; if (keys.d||keys.arrowright) fx += 1;
-  if (fx || fz) { if (me.seat !== null) { me.leaveSeat(); renderVisitors(); } const l = Math.hypot(fx,fz); const dx = (fx*Math.cos(yaw) + fz*Math.sin(yaw))/l, dz = (-fx*Math.sin(yaw) + fz*Math.cos(yaw))/l; me.target = new THREE.Vector3(THREE.MathUtils.clamp(me.pos.x + dx*.5,-5.5,5.5), 0, THREE.MathUtils.clamp(me.pos.z + dz*.5, BAR_Z+1.5, 4.4)); me.arrive = null; }
+  if (fx || fz) { if (me.seat !== null) { me.leaveSeat(); renderVisitors(); } const l = Math.hypot(fx,fz); const dx = (fx*Math.cos(yaw) + fz*Math.sin(yaw))/l, dz = (-fx*Math.sin(yaw) + fz*Math.cos(yaw))/l; me.target = new THREE.Vector3(THREE.MathUtils.clamp(me.pos.x + dx*.5,-5.5,5.5), 0, THREE.MathUtils.clamp(me.pos.z + dz*.5, BAR_Z+1.5, FRONT_Z)); me.arrive = null; }
   me.update(dt); bartender.update(dt);
   // bartender wanders behind the bar a little
   if (!bartender.target && Math.random() < dt*.08) bartender.walkTo(rand(-3.5,3.5), -3.05, () => { bartender.faceTo = 0; bartender.pose = 'wipe'; });
@@ -1163,13 +1167,14 @@ function tick(){
   disc.rotation.y += dt*(soundOn ? 3.5 : 0); label.rotation.y = disc.rotation.y;
   scheduleMusic();
   // camera: look over the counter, centred on me
-  const tgt = drawing ? new THREE.Vector3(-5.0, 1.95, me.pos.z + .1) : new THREE.Vector3(me.pos.x*.6, (me.seat !== null ? 1.15 : 1.0), me.seat !== null ? Math.max(me.pos.z - .6, BAR_Z + .4) : Math.max(me.pos.z - 2.2, BAR_Z + .6));
+  const seatNow = me.seat !== null ? SEATS[me.seat] : null;
+  const tgt = drawing ? new THREE.Vector3(-5.0, 1.95, me.pos.z + .1) : seatNow ? new THREE.Vector3(seatNow.x + Math.sin(seatNow.face)*.25, 1.1, seatNow.z + Math.cos(seatNow.face)*.25) : new THREE.Vector3(me.pos.x*.6, 1.0, Math.max(me.pos.z - 2.2, BAR_Z + .6));
   camT.lerp(tgt, Math.min(1, dt*4));
   // 벽 밖으로 나가지 않게 각도는 그대로 두고 거리만 줄여요
   const cy = drawing ? Math.PI/2 : yaw, cp = drawing ? .08 : pitch;
   const dir = new THREE.Vector3(Math.sin(cy)*Math.cos(cp), Math.sin(cp), Math.cos(cy)*Math.cos(cp));
   let dd = drawing ? 1.7 : dist;
-  if (dir.z > 0) dd = Math.min(dd, (5.6 - camT.z) / dir.z);
+  if (dir.z > 0) dd = Math.min(dd, (FRONT_Z + .5 - camT.z) / dir.z); else if (dir.z < 0) dd = Math.min(dd, (-3.7 - camT.z) / dir.z);
   if (dir.x > 0) dd = Math.min(dd, (5.7 - camT.x) / dir.x); else if (dir.x < 0) dd = Math.min(dd, (-5.7 - camT.x) / dir.x);
   if (dir.y > 0) dd = Math.min(dd, (3.85 - camT.y) / dir.y);
   dd = Math.max(drawing ? 1.2 : 1.6, dd);
@@ -1183,7 +1188,7 @@ function tick(){
 renderVisitors(); tick();
 setTimeout(() => { $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 1300); }, 900);
 setTimeout(() => $('hint').style.opacity = 0, 9000);
-window.__bar = {me, npcs, SEATS, setNapkin, cat, fogStroke, heartPts, openReceipt, startDraw, stats, setYaw:v=>yaw=v, setDist:v=>dist=v, setPitch:v=>pitch=v};
+window.__bar = {aimSeat, me, npcs, SEATS, setNapkin, cat, fogStroke, heartPts, openReceipt, startDraw, stats, setYaw:v=>yaw=v, setDist:v=>dist=v, setPitch:v=>pitch=v};
 })();
 </script>
 </body>
