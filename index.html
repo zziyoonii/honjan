@@ -190,7 +190,7 @@
 <div id="rooms" class="panel">
   <h3>골목의 혼잔 <button data-close="rooms" aria-label="닫기">×</button></h3>
   <div id="roomList"></div>
-  <p style="margin-top:8px">한 가게에 18자리예요. 꽉 차면 다음 가게로 안내해요.</p>
+  <p style="margin-top:8px">한 가게에 20자리예요. 꽉 차면 다음 가게로 안내해요.</p>
 </div>
 <div id="receipt" class="panel">
   <div class="paper" id="receiptPaper"></div>
@@ -228,7 +228,7 @@ const pick = a => a[Math.floor(Math.random()*a.length)];
 const params = new URLSearchParams(location.search);
 const ROOM_PARAM = (params.get('room') || '').replace(/[^0-9]/g,'').slice(0,3);
 let ROOM = ROOM_PARAM || '1';
-const ROOM_CAP = 18;
+const ROOM_CAP = 20;
 let roomCounts = {};
 const LOCAL_TEST = params.has('localtest');
 const ONLINE = LOCAL_TEST || !!(SUPABASE_URL && SUPABASE_KEY);
