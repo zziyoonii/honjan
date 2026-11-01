@@ -407,32 +407,31 @@ const rug2 = new THREE.Mesh(new THREE.PlaneGeometry(4.6,2.2), new THREE.MeshStan
 const pole = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.6,6), metalM); pole.position.set(5.45,.8,4.15); scene.add(pole);
 const fshade = new THREE.Mesh(new THREE.CylinderGeometry(.16,.24,.3,20,1,true), mat('#efe0c4',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.6})); fshade.position.set(5.45,1.7,4.15); scene.add(fshade);
 const floorLamp = new THREE.PointLight('#ffc27a', 1.1, 6, 2); floorLamp.position.set(5.3,1.6,3.9); scene.add(floorLamp);
-// 책장 (왼쪽 벽 앞쪽)
-box(.32,2.2,1.4,woodDark,-5.72,1.1,3.55);
+// 책 코너: 바 오른쪽 끝, 오른쪽 벽 책장 앞 (기본 시점에서 한눈에 보여요)
+box(.32,2.2,1.5,woodDark,5.72,1.1,-1.3);
 const BOOK = ['#7a2a2a','#2a4a6a','#c9a04a','#3a5a3a','#d8d0c0','#5a3a6a','#8a5a3a'];
-for (const y of [.35,.95,1.55]) { box(.3,.04,1.32,wood,-5.7,y-.04,3.55,false); let z = 2.92; while (z < 4.15) { const bw = rand(.05,.09), bh = rand(.32,.46); const b = box(.22,bh,bw,mat(pick(BOOK),{roughness:.8}),-5.68,y+bh/2-.02,z+bw/2,false); if (Math.random()<.12) b.rotation.x = .25; z += bw + .008; } }
-// 책 코너: 책장 옆 안락의자 두 개 + 사이드 테이블 + 독서등
+for (const y of [.35,.95,1.55]) { box(.3,.04,1.42,wood,5.7,y-.04,-1.3,false); let z = -1.98; while (z < -.65) { const bw = rand(.05,.09), bh = rand(.32,.46); const b = box(.22,bh,bw,mat(pick(BOOK),{roughness:.8}),5.68,y+bh/2-.02,z+bw/2,false); if (Math.random()<.12) b.rotation.x = .25; z += bw + .008; } }
 const armM = mat('#8a5a3a',{roughness:.9}), armM2 = mat('#9a6a48',{roughness:.9});
-function armchair(x,z){
-  box(.66,.3,.66,armM,x,.2,z); box(.58,.1,.58,armM2,x+.02,.4,z);
-  box(.14,.62,.66,armM,x-.3,.55,z); box(.66,.42,.12,armM,x,.48,z-.3); box(.66,.42,.12,armM,x,.48,z+.3);
+function armchair(x,z){   // 방 쪽(-x)을 보고 앉아요
+  box(.66,.3,.66,armM,x,.2,z); box(.58,.1,.58,armM2,x-.02,.4,z);
+  box(.14,.62,.66,armM,x+.3,.55,z); box(.66,.42,.12,armM,x,.48,z-.3); box(.66,.42,.12,armM,x,.48,z+.3);
   const hit = new THREE.Mesh(new THREE.BoxGeometry(.66,.6,.66), new THREE.MeshBasicMaterial({visible:false})); hit.position.set(x,.35,z); scene.add(hit);
-  addSeat({x:x+.06, z, face:Math.PI/2, h:.44, kind:'read', d:0, sy:.63, spot:[x+.05, 3.75], meshes:[hit]});
+  addSeat({x:x-.06, z, face:-Math.PI/2, h:.44, kind:'read', d:0, sy:.63, spot:[x-.05, -.35], meshes:[hit]});
 }
-armchair(-4.75,3.1); armchair(-4.75,4.4);
-box(.42,.04,.42,woodDark,-4.7,.6,3.75); box(.06,.58,.06,woodDark,-4.7,.3,3.75);
-const stack = [['#7a2a2a',.03],['#2a4a6a',.025],['#c9a04a',.035]]; let sy0 = .62; for (const [c,h] of stack) { const b = box(.22,h,.16,mat(c,{roughness:.8}),-4.72,sy0+h/2,3.72,false); b.rotation.y = rand(-.3,.3); sy0 += h; }
-const rpole = new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.5,6), metalM); rpole.position.set(-5.35,.75,3.75); scene.add(rpole);
-const rarm = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.5,6), metalM); rarm.rotation.z = Math.PI/2.6; rarm.position.set(-5.15,1.55,3.75); scene.add(rarm);
-const rshade = new THREE.Mesh(new THREE.ConeGeometry(.12,.16,16,1,true), mat('#2f4a3e',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.25})); rshade.position.set(-4.95,1.55,3.75); scene.add(rshade);
-const readLight = new THREE.SpotLight('#ffd49a', 1.6, 4, Math.PI/4, .6, 2); readLight.position.set(-4.95,1.5,3.75); readLight.target.position.set(-4.6,.5,3.75); scene.add(readLight); scene.add(readLight.target);
+armchair(4.95,-.95); armchair(4.95,.25);
+box(.42,.04,.42,woodDark,4.9,.6,-.35); box(.06,.58,.06,woodDark,4.9,.3,-.35);
+const stack = [['#7a2a2a',.03],['#2a4a6a',.025],['#c9a04a',.035]]; let sy0 = .62; for (const [c,h] of stack) { const b = box(.22,h,.16,mat(c,{roughness:.8}),4.92,sy0+h/2,-.38,false); b.rotation.y = rand(-.3,.3); sy0 += h; }
+const rpole = new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.5,6), metalM); rpole.position.set(5.45,.75,-.35); scene.add(rpole);
+const rarm = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.5,6), metalM); rarm.rotation.z = -Math.PI/2.6; rarm.position.set(5.25,1.55,-.35); scene.add(rarm);
+const rshade = new THREE.Mesh(new THREE.ConeGeometry(.12,.16,16,1,true), mat('#2f4a3e',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.25})); rshade.position.set(5.05,1.55,-.35); scene.add(rshade);
+const readLight = new THREE.SpotLight('#ffd49a', 1.6, 4, Math.PI/4, .6, 2); readLight.position.set(5.05,1.5,-.35); readLight.target.position.set(4.7,.5,-.35); scene.add(readLight); scene.add(readLight.target);
 // 오른쪽 벽 액자 두 점
 function frame(z, draw){ const t = canvasTex(200,260,draw); const f = new THREE.Mesh(new THREE.PlaneGeometry(.7,.9), new THREE.MeshStandardMaterial({map:t, roughness:.9})); f.rotation.y = -Math.PI/2; f.position.set(5.86,2.25,z); scene.add(f); box(.03,.98,.78,mat('#1a1214'),5.88,2.25,z,false); }
 frame(1.5,(g,w,h)=>{ g.fillStyle='#e9dcc4'; g.fillRect(0,0,w,h); g.fillStyle='#c9673e'; g.beginPath(); g.arc(w/2,h*.42,52,0,Math.PI*2); g.fill(); g.fillStyle='#2f4a3e'; g.fillRect(0,h*.62,w,h*.38); g.fillStyle='#3a5a4c'; g.fillRect(0,h*.7,w,h*.3); });
 frame(2.9,(g,w,h)=>{ g.fillStyle='#1d2340'; g.fillRect(0,0,w,h); g.fillStyle='#f0d8a0'; g.beginPath(); g.arc(w*.68,h*.28,22,0,Math.PI*2); g.fill(); g.fillStyle='#e9e2d0'; for (let i=0;i<40;i++) g.fillRect(Math.random()*w,Math.random()*h*.6,1.5,1.5); g.fillStyle='#0e1220'; g.beginPath(); g.moveTo(0,h); g.lineTo(w*.3,h*.6); g.lineTo(w*.55,h*.8); g.lineTo(w*.8,h*.55); g.lineTo(w,h*.75); g.lineTo(w,h); g.fill(); });
 // 큰 화분
 function bigPlant(x,z){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(.22,.17,.42,14), mat('#3a2a24',{roughness:.6})); pot.position.set(x,.21,z); pot.castShadow = true; scene.add(pot); for (let i=0;i<9;i++){ const leaf = new THREE.Mesh(new THREE.SphereGeometry(.22,10,6), mat(pick(['#3f5f36','#4f6d40','#5f7f4c']),{roughness:.8})); leaf.scale.set(1,.25,.6); const a = i/9*Math.PI*2; leaf.position.set(x+Math.cos(a)*.25, .7+rand(0,.6), z+Math.sin(a)*.25); leaf.rotation.set(rand(-.6,.6), a, rand(-.4,.4)); leaf.castShadow = true; scene.add(leaf); } }
-bigPlant(-5.3,-1.15); bigPlant(3.15,4.25);
+bigPlant(-5.3,-1.15); bigPlant(3.15,4.25); bigPlant(-5.2,3.9);
 // 천장 전구 줄
 for (const zz of [1.2,3.0]) { for (let i=0;i<=18;i++){ const t = i/18, x = -5.6 + t*11.2, y = 3.75 - Math.sin(t*Math.PI)*.35; const bulb = new THREE.Mesh(new THREE.SphereGeometry(.035,8,6), new THREE.MeshBasicMaterial({color:lin(i%3 ? '#ffd9a0' : '#ffb870')})); bulb.position.set(x,y,zz); scene.add(bulb); } }
 // LP turntable at counter end
@@ -448,7 +447,7 @@ const pot = new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,.2,12), mat('#8a5a3
 for (let i=0;i<4;i++){ const l = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(.1,.15),0), mat('#4f6d40',{flatShading:true})); l.position.set(-4.6+rand(-.08,.08),1.35+rand(0,.12),BAR_Z+rand(-.08,.08)); scene.add(l); }
 const boardTex = canvasTex(256,320,(g,w,h)=>{ g.fillStyle='#1b201c'; g.fillRect(0,0,w,h); g.strokeStyle='#6b4a30'; g.lineWidth=14; g.strokeRect(0,0,w,h); g.fillStyle='#e9e2d0'; g.font='30px "Nanum Pen Script", cursive'; g.textAlign='center'; g.fillText('오늘의 메뉴',w/2,52); g.font='26px "Nanum Pen Script", cursive'; ['소주','하이볼','생맥주','레드 와인','따뜻한 보리차','무알콜 하이볼'].forEach((t,i)=>g.fillText(t,w/2,104+i*36)); });
 const board = new THREE.Mesh(new THREE.PlaneGeometry(.9,1.12), new THREE.MeshStandardMaterial({map:boardTex, roughness:.9}));
-board.position.set(5.88,2.0,-.6); board.rotation.y = -Math.PI/2; scene.add(board);
+board.position.set(-5.88,2.2,-2.3); board.rotation.y = Math.PI/2; scene.add(board);
 // door area hint light
 
 /* ---------- drinks ---------- */
@@ -1098,9 +1097,9 @@ const net = ONLINE ? makeTransport({
 updateLabel();
 
 /* ---------- camera & input ---------- */
-let yaw = .6, pitch = .3, dist = 4.6;
-function fitCamera(){ const portrait = innerWidth/innerHeight < .85; camera.fov = portrait ? 66 : 50; camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
-fitCamera(); if (innerWidth/innerHeight < .85) { dist = 5.2; pitch = .34; }
+let yaw = 0, pitch = .42, dist = 7;
+function fitCamera(){ const portrait = innerWidth/innerHeight < .85; camera.fov = portrait ? 72 : 52; camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
+fitCamera(); if (innerWidth/innerHeight < .85) { dist = 7; pitch = .5; }
 if (IS_TOUCH) $('hint').textContent = '빈 의자를 톡 눌러 앉아요 · 밀어서 둘러보기';
 const keys = {}; addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; keys[e.key.toLowerCase()] = true; if (e.key === '1') $('cheersBtn').click(); if (e.key === '2') $('sipBtn').click(); });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -1110,7 +1109,7 @@ cvs.addEventListener('pointerdown', e => { if (drawing) { const uv = fogUV(e); i
 cvs.addEventListener('pointermove', e => { if (drawing && drawStroke) { const uv = fogUV(e); if (uv) { const last = drawStroke[drawStroke.length-1]; fogStroke([last, uv]); drawStroke.push(uv); drawSendBuf.push(uv); flushDraw(false); } e.stopImmediatePropagation(); } }, true);
 cvs.addEventListener('pointerup', e => { if (drawing && drawStroke) { drawStroke = null; flushDraw(true); drawSendBuf = []; e.stopImmediatePropagation(); } }, true);
 cvs.addEventListener('pointerdown', e => { if (drawing && drawStroke) return; closePanels(); cvs.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); drag = {x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false}; if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; pinch = Math.hypot(a.x-b.x,a.y-b.y); } });
-cvs.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; const d = Math.hypot(a.x-b.x,a.y-b.y); dist = THREE.MathUtils.clamp(dist*pinch/d, 2.5, 9); pinch = d; if (drag) drag.moved = true; return; } if (!drag) return; const dx = e.clientX-drag.x, dy = e.clientY-drag.y; drag.x = e.clientX; drag.y = e.clientY; if (Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) > (e.pointerType === 'touch' ? 12 : 6)) drag.moved = true; if (drag.moved) { yaw = THREE.MathUtils.clamp(yaw - dx*.006, -1.2, 1.2); pitch = THREE.MathUtils.clamp(pitch + dy*.004, .05, 1.0); } });
+cvs.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; const d = Math.hypot(a.x-b.x,a.y-b.y); dist = THREE.MathUtils.clamp(dist*pinch/d, 2.5, 9); pinch = d; if (drag) drag.moved = true; return; } if (!drag) return; const dx = e.clientX-drag.x, dy = e.clientY-drag.y; drag.x = e.clientX; drag.y = e.clientY; if (Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) > (e.pointerType === 'touch' ? 12 : 6)) drag.moved = true; if (drag.moved) { yaw = THREE.MathUtils.clamp(yaw - dx*.006, -1.7, 1.7); pitch = THREE.MathUtils.clamp(pitch + dy*.004, .05, 1.0); } });
 cvs.addEventListener('pointerup', e => {
   ptrs.delete(e.pointerId); if (!drag || drag.moved) { if (!ptrs.size) drag = null; return; }
   ray.setFromCamera(new THREE.Vector2((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1), camera);
@@ -1164,7 +1163,7 @@ function tick(){
   disc.rotation.y += dt*(soundOn ? 3.5 : 0); label.rotation.y = disc.rotation.y;
   scheduleMusic();
   // camera: look over the counter, centred on me
-  const tgt = drawing ? new THREE.Vector3(-5.0, 1.95, me.pos.z + .1) : new THREE.Vector3(me.pos.x*.75, (me.seat !== null ? 1.15 : 1.0), Math.max(me.pos.z - .6, BAR_Z + .4));
+  const tgt = drawing ? new THREE.Vector3(-5.0, 1.95, me.pos.z + .1) : new THREE.Vector3(me.pos.x*.6, (me.seat !== null ? 1.15 : 1.0), me.seat !== null ? Math.max(me.pos.z - .6, BAR_Z + .4) : Math.max(me.pos.z - 2.2, BAR_Z + .6));
   camT.lerp(tgt, Math.min(1, dt*4));
   // 벽 밖으로 나가지 않게 각도는 그대로 두고 거리만 줄여요
   const cy = drawing ? Math.PI/2 : yaw, cp = drawing ? .08 : pitch;
