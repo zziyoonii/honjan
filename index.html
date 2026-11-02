@@ -173,7 +173,7 @@
   <h3>바텐더한테 한 잔 사주기 <button data-close="fee" aria-label="닫기">×</button></h3>
   <p style="color:var(--ink);margin-bottom:8px">오늘 잘 쉬다 가셨나요? 🥃<br><span style="color:var(--ink-soft)">자율이에요. 안 사줘도 괜찮아요.</span></p>
   <div class="fee-menu">
-    <div><span>바텐더한테 소주 한 잔</span><span>1,000원</span></div>
+    <div><span>바텐더한테 칵테일 한 잔</span><span>1,000원</span></div>
     <div><span>마른안주 추가</span><span>+500원</span></div>
     <div><span>LP 한 장 더 사오기</span><span>+3,000원</span></div>
   </div>
@@ -505,7 +505,7 @@ scene.add(lp);
 // little plant & menu board
 const pot = new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,.2,12), mat('#8a5a3a')); pot.position.set(-4.6,1.18,BAR_Z); scene.add(pot);
 for (let i=0;i<4;i++){ const l = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(.1,.15),0), mat('#4f6d40',{flatShading:true})); l.position.set(-4.6+rand(-.08,.08),1.35+rand(0,.12),BAR_Z+rand(-.08,.08)); scene.add(l); }
-const boardTex = canvasTex(256,320,(g,w,h)=>{ g.fillStyle='#1b201c'; g.fillRect(0,0,w,h); g.strokeStyle='#6b4a30'; g.lineWidth=14; g.strokeRect(0,0,w,h); g.fillStyle='#e9e2d0'; g.font='30px "Nanum Pen Script", cursive'; g.textAlign='center'; g.fillText('오늘의 메뉴',w/2,52); g.font='26px "Nanum Pen Script", cursive'; ['소주','하이볼','생맥주','레드 와인','따뜻한 보리차','무알콜 하이볼'].forEach((t,i)=>g.fillText(t,w/2,104+i*36)); });
+const boardTex = canvasTex(256,320,(g,w,h)=>{ g.fillStyle='#1b201c'; g.fillRect(0,0,w,h); g.strokeStyle='#6b4a30'; g.lineWidth=14; g.strokeRect(0,0,w,h); g.fillStyle='#e9e2d0'; g.font='30px "Nanum Pen Script", cursive'; g.textAlign='center'; g.fillText('오늘의 칵테일',w/2,46); g.font='22px "Nanum Pen Script", cursive'; ['올드 패션드','마티니','네그로니','모히또','마가리타','하이볼','버진 모히또','따뜻한 레몬차'].forEach((t,i)=>g.fillText(t,w/2,86+i*28)); });
 const board = new THREE.Mesh(new THREE.PlaneGeometry(.9,1.12), new THREE.MeshStandardMaterial({map:boardTex, roughness:.9}));
 board.position.set(5.88,2.0,-.9); board.rotation.y = -Math.PI/2; scene.add(board);
 // door area hint light
@@ -566,12 +566,14 @@ function findPath(ax,az,bx,bz){
 
 /* ---------- drinks ---------- */
 const DRINKS = {
-  soju:     {name:'소주',          note:'초록병 하나',     liquid:'#eef5f0', glass:'shot',  bottle:true},
-  highball: {name:'하이볼',        note:'얼음 가득',       liquid:'#d99a3e', glass:'tall'},
-  beer:     {name:'생맥주',        note:'500cc',           liquid:'#e8b23a', glass:'mug'},
-  wine:     {name:'레드 와인',     note:'한 잔만',         liquid:'#6e1a2a', glass:'wine'},
-  tea:      {name:'따뜻한 보리차', note:'무알콜',          liquid:'#9a6a3a', glass:'cup'},
-  nohigh:   {name:'무알콜 하이볼', note:'기분만',          liquid:'#e8d88a', glass:'tall'},
+  oldfashioned: {name:'올드 패션드',   note:'위스키 · 오렌지 껍질', liquid:'#b8641e', glass:'rocks',   garnish:'peel'},
+  martini:      {name:'마티니',        note:'드라이 · 올리브',      liquid:'#eef2e2', glass:'martini', garnish:'olive'},
+  negroni:      {name:'네그로니',      note:'쌉싸름한 오렌지빛',    liquid:'#c0352a', glass:'rocks',   garnish:'orange'},
+  mojito:       {name:'모히또',        note:'민트 · 라임',          liquid:'#d6e8b0', glass:'tall',    garnish:'mint'},
+  margarita:    {name:'마가리타',      note:'소금 테두리',          liquid:'#e8e4a2', glass:'coupe',   garnish:'lime'},
+  highball:     {name:'하이볼',        note:'얼음 가득',            liquid:'#d99a3e', glass:'tall',    garnish:'lemon'},
+  virgin:       {name:'버진 모히또',   note:'무알콜',               liquid:'#dcefc4', glass:'tall',    garnish:'mint'},
+  tea:          {name:'따뜻한 레몬차', note:'무알콜',               liquid:'#d9a64a', glass:'cup'},
 };
 const glassM = new THREE.MeshStandardMaterial({color:lin('#ffffff'), roughness:.05, metalness:0, transparent:true, opacity:.28});
 // 잔은 바닥이 원점(y=0)이라 놓는 면 높이에 바로 올리면 돼요
@@ -598,12 +600,12 @@ function makeGlass(kind){
     const liq = cyl(.041,.037,.14,L,.006);
     const ice = []; for (let i=0;i<3;i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(.034,.034,.034), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.05, transparent:true, opacity:.45})); c.rotation.set(rand(0,1),rand(0,1),rand(0,1)); c.position.set(rand(-.01,.01), .03 + i*.035, rand(-.01,.01)); g.add(c); ice.push(c); }
     // 레몬(라임) 슬라이스 + 빨대
-    const citrus = kind === 'nohigh' ? '#9cc54a' : '#f2d24a';
+    const isMint = D.garnish === 'mint', citrus = isMint ? '#9cc54a' : '#f2d24a';
     const wheel = new THREE.Group(); wheel.position.set(.04,.165,0); wheel.rotation.set(0,0,Math.PI/2); g.add(wheel);
     const rind = new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.007,20), mat(citrus,{roughness:.6})); wheel.add(rind);
-    const pulp = new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.008,20), mat(kind === 'nohigh' ? '#cfe88a' : '#fbe9a0',{roughness:.7,emissive:citrus,emissiveIntensity:.1})); wheel.add(pulp);
-    if (kind === 'nohigh') { const mint = new THREE.Mesh(new THREE.SphereGeometry(.018,8,6), mat('#4f9a4a')); mint.scale.set(1,.35,.7); mint.position.set(-.012,.15,.01); g.add(mint); }
-    const straw = cyl(.004,.004,.23,mat(kind === 'nohigh' ? '#3a7a5a' : '#2a2a2a',{roughness:.5}),.01); straw.rotation.z = -.22; straw.position.x = -.012;
+    const pulp = new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.008,20), mat(isMint ? '#cfe88a' : '#fbe9a0',{roughness:.7,emissive:citrus,emissiveIntensity:.1})); wheel.add(pulp);
+    if (isMint) { for (let i=0;i<4;i++){ const mint = new THREE.Mesh(new THREE.SphereGeometry(.016,8,6), mat(i%2 ? '#4f9a4a' : '#5fb35a')); mint.scale.set(1,.3,.65); mint.rotation.set(rand(-.6,.6), rand(0,3), rand(-.4,.4)); mint.position.set(rand(-.02,.015), rand(.06,.15), rand(-.02,.02)); g.add(mint); } }
+    const straw = cyl(.004,.004,.23,mat(isMint ? '#3a7a5a' : '#2a2a2a',{roughness:.5}),.01); straw.rotation.z = -.22; straw.position.x = -.012;
     bubbles(.035,.13,.01,7);
     setLevel = lv => { liq.scale.y = Math.max(.02, lv); liq.visible = lv > .03; ice.forEach((c,i) => c.position.y = Math.min(.03 + i*.035, .01 + .14*lv - .01 + i*.012)); };
   } else if (D.glass === 'mug') {
@@ -613,6 +615,34 @@ function makeGlass(kind){
     const foam = cyl(.052,.052,.025,foamM,.122); const dome = new THREE.Mesh(new THREE.SphereGeometry(.052,16,8,0,Math.PI*2,0,Math.PI/2), foamM); dome.scale.y = .35; foam.add(dome); dome.position.y = .025;
     bubbles(.045,.1,.015,8);
     setLevel = lv => { liq.scale.y = Math.max(.02, lv); liq.visible = lv > .03; foam.position.y = .012 + .11*lv; foam.scale.y = Math.max(.2, lv); foam.visible = lv > .05; };
+  } else if (D.glass === 'rocks') {
+    // 올드 패션드·네그로니: 낮고 넓은 잔 + 큰 얼음 한 덩이
+    cyl(.05,.046,.085,glassM); cyl(.051,.051,.01,glassM);
+    const liq = cyl(.046,.042,.06,L,.01);
+    const ice = new THREE.Mesh(new THREE.BoxGeometry(.056,.056,.056), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.05, transparent:true, opacity:.5})); ice.rotation.y = .4; ice.position.y = .042; g.add(ice);
+    if (D.garnish === 'peel') { const peel = new THREE.Mesh(new THREE.BoxGeometry(.012,.07,.004), mat('#f08a2a',{roughness:.6})); peel.position.set(.03,.07,0); peel.rotation.z = -.35; g.add(peel); }
+    else { const w = new THREE.Group(); w.position.set(.0,.068,.015); w.rotation.x = Math.PI/2.3; g.add(w); w.add(new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.006,20), mat('#f08a2a',{roughness:.6}))); const pp = new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.007,20), mat('#ffb45a',{roughness:.7})); w.add(pp); }
+    setLevel = lv => { liq.scale.y = Math.max(.02, lv); liq.visible = lv > .03; ice.position.y = Math.min(.042, .012 + .06*lv); };
+  } else if (D.glass === 'martini') {
+    // 마티니: 역삼각 잔 + 올리브
+    cyl(.032,.032,.004,glassM); cyl(.004,.005,.075,glassM,.004);
+    const coneGeo = new THREE.ConeGeometry(.058,.065,24,1,true); coneGeo.rotateX(Math.PI); coneGeo.translate(0,.0325,0);
+    const bowl = new THREE.Mesh(coneGeo, glassM); bowl.position.y = .079; g.add(bowl);
+    const lg = new THREE.ConeGeometry(.05,.056,24); lg.rotateX(Math.PI); lg.translate(0,.028,0);
+    const liq = new THREE.Mesh(lg, L); liq.position.y = .081; g.add(liq);
+    const pick = cyl(.0018,.0018,.09,mat('#c9a04a'),.09); pick.rotation.z = .5; pick.position.x = -.02;
+    const olive = new THREE.Mesh(new THREE.SphereGeometry(.011,10,8), mat('#6a8a2a',{roughness:.5})); olive.scale.y = 1.3; olive.position.set(-.004,.112,0); g.add(olive);
+    setLevel = lv => { const k = Math.max(.05, lv); liq.scale.set(Math.sqrt(k), k, Math.sqrt(k)); liq.visible = lv > .03; };
+  } else if (D.glass === 'coupe') {
+    // 마가리타: 납작한 잔 + 소금 테두리 + 라임
+    cyl(.034,.034,.004,glassM); cyl(.004,.005,.07,glassM,.004);
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(.06,24,10,0,Math.PI*2,Math.PI*.6,Math.PI*.4), glassM); bowl.position.y = .134; g.add(bowl);
+    const lg = new THREE.Group(); lg.position.y = .076; g.add(lg);
+    const lgeo = new THREE.SphereGeometry(.056,24,8,0,Math.PI*2,Math.PI*.66,Math.PI*.34); lgeo.translate(0,.056,0); lg.add(new THREE.Mesh(lgeo, L));
+    const top = new THREE.Mesh(new THREE.CircleGeometry(.056*Math.sin(Math.PI*.66),24), L); top.rotation.x = -Math.PI/2; top.position.y = .056 + .056*Math.cos(Math.PI*.66); lg.add(top);
+    const salt = new THREE.Mesh(new THREE.TorusGeometry(.06*Math.sin(Math.PI*.6),.004,6,28), mat('#fbfbf6',{roughness:1})); salt.rotation.x = Math.PI/2; salt.position.y = .134 + .06*Math.cos(Math.PI*.6); g.add(salt);
+    const w = new THREE.Group(); w.position.set(.05,.118,0); w.rotation.z = Math.PI/2; g.add(w); w.add(new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.006,18), mat('#7ab03a'))); w.add(new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.007,18), mat('#cfe88a')));
+    setLevel = lv => { lg.scale.set(1, Math.max(.05, lv), 1); lg.visible = lv > .03; };
   } else if (D.glass === 'wine') {
     cyl(.036,.036,.004,glassM); cyl(.005,.006,.085,glassM,.004);
     const bowl = new THREE.Mesh(new THREE.SphereGeometry(.05,20,14,0,Math.PI*2,Math.PI*.3,Math.PI*.7), glassM); bowl.position.y = .135; g.add(bowl);
@@ -622,7 +652,7 @@ function makeGlass(kind){
     const top = new THREE.Mesh(new THREE.CircleGeometry(.033,20), L); top.rotation.x = -Math.PI/2; top.position.y = .046 - .046*Math.cos(Math.PI*.38) + .0; liqG.add(top);
     setLevel = lv => { liqG.scale.set(1, Math.max(.05, lv), 1); liqG.visible = lv > .03; };
   } else {
-    // 따뜻한 보리차: 받침 + 찻잔 + 김
+    // 따뜻한 레몬차: 받침 + 찻잔 + 김 + 레몬 한 조각
     cyl(.068,.062,.008,ceramicM); cyl(.046,.034,.065,ceramicM,.008);
     const hd = new THREE.Mesh(new THREE.TorusGeometry(.017,.006,6,12), ceramicM); hd.position.set(.05,.045,0); hd.rotation.y = Math.PI/2; g.add(hd);
     const liq = cyl(.041,.041,.004,L,.065);
@@ -630,7 +660,8 @@ function makeGlass(kind){
     anims.push((dt,level) => steam.forEach((st,i) => { st.userData.t = (st.userData.t + dt*.35) % 1; const t = st.userData.t; st.position.set(Math.sin(t*6+i)*.012, .08 + t*.16, Math.cos(t*5+i)*.01); st.scale.setScalar(.6 + t*1.4); st.material.opacity = .2*(1-t)*(level > .05 ? 1 : 0); }));
     setLevel = lv => { liq.position.y = .02 + .045*lv; liq.visible = lv > .03; };
   }
-  g.userData.h = ({shot:.07, tall:.17, mug:.15, wine:.185, cup:.075})[D.glass] || .15;
+  if (D.glass === 'cup') { const lw = new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.004,16), mat('#f2d24a')); lw.position.y = .07; lw.rotation.x = .2; g.add(lw); g.userData.lemon = lw; }
+  g.userData.h = ({shot:.07, tall:.17, mug:.15, wine:.185, cup:.075, rocks:.085, martini:.145, coupe:.14})[D.glass] || .15;
   g.userData.kind = kind; g.userData.setLevel = setLevel; g.userData.anim = (dt, lv) => anims.forEach(a => a(dt, lv));
   return g;
 }
@@ -920,7 +951,7 @@ let myDrink = saved && DRINKS[saved.drink] ? saved.drink : 'highball';
 const todayKST = new Date(Date.now() + 9*3600e3 - 6*3600e3).toISOString().slice(0,10);   // 새벽 6시 전까지는 전날 영업으로 쳐요
 const regular = Object.assign({visits:0, last:'', drinks:{}}, saved && saved.regular || {});
 if (regular.last !== todayKST) { regular.visits += 1; regular.last = todayKST; }
-const favDrink = () => { const e = Object.entries(regular.drinks).sort((a,b) => b[1]-a[1])[0]; return e && e[1] >= 2 ? e[0] : null; };
+const favDrink = () => { const e = Object.entries(regular.drinks).filter(([k]) => DRINKS[k]).sort((a,b) => b[1]-a[1])[0]; return e && e[1] >= 2 ? e[0] : null; };
 function saveMe(){ try { localStorage.setItem('honjan-me', JSON.stringify({name:myName, look:myLook, drink:myDrink, regular})); } catch(e) {} }
 saveMe();
 const stats = {start: Date.now(), orders:{}, sips:0, cheers:0, napkins:0, pets:0, draws:0, books:new Set()};
@@ -1065,7 +1096,7 @@ $('lpBtn').onclick = () => { const o = $('lpPanel').classList.contains('open'); 
 /* ---------- actions ---------- */
 const drinkMenu = $('drinkMenu');
 function renderMenu(){
-  drinkMenu.innerHTML = '<div class="sep">오늘의 한 잔</div>' + Object.entries(DRINKS).map(([k,d]) => `<button data-drink="${k}" class="${k===myDrink?'sel':''}">${d.name}<span>${d.note}</span></button>`).join('') +
+  drinkMenu.innerHTML = '<div class="sep">오늘의 칵테일</div>' + Object.entries(DRINKS).map(([k,d]) => `<button data-drink="${k}" class="${k===myDrink?'sel':''}">${d.name}<span>${d.note}</span></button>`).join('') +
     '<div class="sep">자세</div><button data-pose="sit">바로 앉기<span>기본</span></button><button data-pose="chin">턱 괴기<span>멍때리기</span></button><button data-pose="rest">엎드리기<span>살짝 졸기</span></button>' +
     (me.seat !== null ? '<button data-act="leave">자리에서 일어나기<span>잔은 두고 가요</span></button>' : '');
 }
