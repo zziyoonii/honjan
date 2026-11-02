@@ -513,7 +513,7 @@ board.position.set(5.88,2.0,-.9); board.rotation.y = -Math.PI/2; scene.add(board
 
 /* ---------- 길찾기: 가구를 피해서 걸어요 ----------
    가구 자리를 격자에 표시해두고(A*), 찾은 길을 곧게 펴서 걸어가요. */
-const NAV = {x0:-6, z0:-4, cell:.2, nx:60, nz:62};
+const NAV = {x0:-6, z0:-4, cell:.15, nx:80, nz:84};
 const OBST = [
   ['r',-5,5,-2.6,-1.42], ['r',-6,-5.28,-.9,2.5], ['r',-6,-5.5,2.95,4.55],             // 카운터, 창가 선반, 책장
   ['r',4.9,6,.5,3.9], ['r',3.5,4.3,.85,3.55],                                        // 소파, 커피 테이블
@@ -524,7 +524,7 @@ const OBST = [
   ...[-.2,.8,1.8].map(z => ['c',-4.92,z,.2]),
   ...[0,1,2,3,4,5,6,7].map(i => ['c',-3.5+i,BAR_Z+1.05,.2]),
 ];
-const BODY_R = .18;
+const BODY_R = .22;
 function navBlockedXY(x,z){
   if (x < -5.65 || x > 5.65 || z < -3.75 || z > FRONT_Z + .4) return true;
   for (const o of OBST) {
@@ -537,14 +537,17 @@ const navGrid = new Uint8Array(NAV.nx*NAV.nz);
 for (let j=0;j<NAV.nz;j++) for (let i=0;i<NAV.nx;i++) navGrid[j*NAV.nx+i] = navBlockedXY(NAV.x0+(i+.5)*NAV.cell, NAV.z0+(j+.5)*NAV.cell) ? 1 : 0;
 const cellOf = (x,z) => [Math.max(0,Math.min(NAV.nx-1,Math.floor((x-NAV.x0)/NAV.cell))), Math.max(0,Math.min(NAV.nz-1,Math.floor((z-NAV.z0)/NAV.cell)))];
 const navBlocked = (x,z) => { const [i,j] = cellOf(x,z); return navGrid[j*NAV.nx+i] === 1; };
-function lineFree(ax,az,bx,bz){ const d = Math.hypot(bx-ax,bz-az), n = Math.ceil(d/.08); for (let k=1;k<n;k++){ const t = k/n; if (navBlocked(ax+(bx-ax)*t, az+(bz-az)*t)) return false; } return true; }
+function lineFree(ax,az,bx,bz){ const d = Math.hypot(bx-ax,bz-az), n = Math.ceil(d/.05); for (let k=0;k<=n;k++){ const t = k/n; if (navBlockedXY(ax+(bx-ax)*t, az+(bz-az)*t)) return false; } return true; }
 function findPath(ax,az,bx,bz){
   if (lineFree(ax,az,bx,bz)) return [[bx,bz]];
-  const [si,sj] = cellOf(ax,az), [gi,gj] = cellOf(bx,bz), N = NAV.nx*NAV.nz, start = sj*NAV.nx+si, goal = gj*NAV.nx+gi;
+  let [si,sj] = cellOf(ax,az); const [gi,gj] = cellOf(bx,bz), N = NAV.nx*NAV.nz;
+  // 출발 칸이 가구 안이면(예: 자리에서 일어날 때) 가장 가까운 빈 칸에서 A*를 시작해요 — 안 그러면 길을 못 찾고 직선으로 뚫고 가요
+  if (navGrid[sj*NAV.nx+si]) { let best=-1, bd=1e9; for (let r=1;r<=12 && best<0;r++) for (let dj=-r;dj<=r;dj++) for (let di=-r;di<=r;di++){ if (Math.max(Math.abs(di),Math.abs(dj))!==r) continue; const ni=si+di, nj=sj+dj; if (ni<0||nj<0||ni>=NAV.nx||nj>=NAV.nz) continue; const c=nj*NAV.nx+ni; if (navGrid[c]) continue; const d=di*di+dj*dj; if (d<bd){bd=d;best=c;} } if (best>=0){ si=best%NAV.nx; sj=Math.floor(best/NAV.nx); } }
+  const start = sj*NAV.nx+si, goal = gj*NAV.nx+gi;
   const gs = new Float32Array(N).fill(1e9), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N), open = [start]; gs[start] = 0;
   const hfn = c => Math.hypot((c%NAV.nx)-gi, Math.floor(c/NAV.nx)-gj);
   let guard = 0;
-  while (open.length && guard++ < 6000) {
+  while (open.length && guard++ < 20000) {
     let bi = 0, bf = 1e9; for (let k=0;k<open.length;k++){ const f = gs[open[k]] + hfn(open[k]); if (f < bf) { bf = f; bi = k; } }
     const cur = open.splice(bi,1)[0]; if (cur === goal) break; if (closed[cur]) continue; closed[cur] = 1;
     const ci = cur % NAV.nx, cj = Math.floor(cur / NAV.nx);
@@ -749,6 +752,14 @@ const POSES = {
 const POSE_NAME = {chin:'턱 괴고 있어요', rest:'엎드려 있어요', sit:'앉아 있어요', sip:'한 모금', cheers:'짠'};
 // 앉은 자리 앞 테이블 면의 한 점 (side: 오른쪽 + / 왼쪽 -)
 function seatPos(s){ const f = s.kind === 'table' ? .1 : s.kind === 'bar' || s.kind === 'window' ? -.02 : 0; return [s.x + Math.sin(s.face)*f, s.z + Math.cos(s.face)*f]; }
+function freeApproach(s){
+  // 좌석 앞/뒤로 벽·가구에 걸리지 않는 '다가서는 지점'을 찾아요
+  const dir = (s.kind === 'sofa' || s.kind === 'read') ? 1 : -1, fx = Math.sin(s.face)*dir, fz = Math.cos(s.face)*dir;
+  for (let r = .45; r <= 1.3; r += .1){ const x = s.x + fx*r, z = s.z + fz*r; if (!navBlockedXY(x,z)) return [x,z]; }
+  // 못 찾으면 주변을 한 바퀴 돌며 가장 가까운 빈 곳
+  for (let r = .5; r <= 1.4; r += .15) for (let a = 0; a < 16; a++){ const ang = s.face + a*Math.PI/8; const x = s.x + Math.sin(ang)*r, z = s.z + Math.cos(ang)*r; if (!navBlockedXY(x,z)) return [x,z]; }
+  return [s.x + fx*.6, s.z + fz*.6];
+}
 function seatSpot(s, side){ if (s.spot) return [s.spot[0], s.spot[1] + side*.6]; const fx = Math.sin(s.face), fz = Math.cos(s.face); return [s.x + fx*s.d - fz*side, s.z + fz*s.d + fx*side]; }
 function lerpAngle(a,b,t){ let d = ((b-a+Math.PI)%(Math.PI*2))-Math.PI; if (d < -Math.PI) d += Math.PI*2; return a + d*t; }
 
@@ -788,8 +799,8 @@ class Person {
   }
   sit(i){
     const s = SEATS[i]; if (!s || (s.taken && s.taken !== this)) return false;
-    this.leaveSeat(); s.taken = this; this.seat = i; const ap = (s.kind === 'sofa' || s.kind === 'read') ? .55 : -.4;   // 소파·안락의자는 앞에서, 나머지는 뒤에서 다가가요
-    const bx = s.x + Math.sin(s.face)*ap, bz = s.z + Math.cos(s.face)*ap;
+    this.leaveSeat(); s.taken = this; this.seat = i;
+    const [bx, bz] = freeApproach(s);   // 가구에 안 걸리는 지점까지 걸어가요
     this.walkTo(bx, bz, () => { const [qx,qz] = seatPos(s); this.pos.set(qx, 0, qz); this.heading = s.face; this.faceTo = s.face; this.pose = 'sit'; this.placeGlass(); if (this.onSat) this.onSat(); });
     return true;
   }
