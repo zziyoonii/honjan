@@ -440,7 +440,7 @@ function table2(tx,tz){
   }
 }
 // 원형 테이블은 가게 가운데에 모아두고, 입구 쪽은 비워둬요
-table2(-2.3,1.5); table2(.6,1.5); table2(-2.3,3.7); table2(.6,3.7); table2(2.7,2.6);
+table2(-2.3,1.5); table2(.6,1.5); table2(-2.3,3.7); table2(.6,3.7); table2(2.2,2.6);
 // 테이블 쪽 은은한 조명 (촛불)
 const candleLight = new THREE.PointLight('#ffb064', .7, 5, 2); candleLight.position.set(-.8,1.4,2.6); scene.add(candleLight);
 
@@ -465,7 +465,7 @@ const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.2,3.2), new THREE.MeshStand
 const rug2 = new THREE.Mesh(new THREE.PlaneGeometry(7.2,4.4), new THREE.MeshStandardMaterial({map:canvasTex(256,128,(g,w,h)=>{ g.fillStyle='#2a2e3a'; g.fillRect(0,0,w,h); g.strokeStyle='#8a7a5a'; g.lineWidth=4; g.strokeRect(8,8,w-16,h-16); }), roughness:1})); rug2.rotation.x = -Math.PI/2; rug2.position.set(-.3,.004,2.6); rug2.receiveShadow = true; scene.add(rug2);
 // 스탠드 조명
 const pole = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.6,6), metalM); pole.position.set(5.45,.8,4.15); scene.add(pole);
-const fshade = new THREE.Mesh(new THREE.CylinderGeometry(.16,.24,.3,20,1,true), mat('#efe0c4',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.6})); fshade.position.set(5.45,1.7,4.15); scene.add(fshade);
+const fshade = new THREE.Mesh(new THREE.CylinderGeometry(.16,.24,.3,20,1,true), mat('#efe0c4',{side:THREE.DoubleSide,emissive:'#ffcf8a',emissiveIntensity:.6})); fshade.position.set(5.45,1.7,4.15); scene.add(fshade); nearHide.push(fshade);
 const floorLamp = new THREE.PointLight('#ffc27a', 1.1, 6, 2); floorLamp.position.set(5.3,1.6,3.9); scene.add(floorLamp);
 // 책 코너: 창가 선반 바로 옆, 왼쪽 벽 책장 앞
 box(.32,2.2,1.5,woodDark,-5.72,1.1,3.75);
@@ -520,7 +520,7 @@ const OBST = [
   ['c',-4.95,3.15,.4], ['c',-4.95,4.35,.4], ['c',-4.9,3.75,.24], ['c',-5.45,3.75,.12], // 안락의자, 사이드 테이블, 독서등
   ['c',5.45,4.15,.16],
   ...[[-5.3,-1.15],[3.15,4.4],[5.3,-.9],[-5.3,7.2],[5.3,7.2]].map(([x,z]) => ['c',x,z,.36]),
-  ...[[-2.3,1.5],[.6,1.5],[-2.3,3.7],[.6,3.7],[2.7,2.6]].flatMap(([x,z]) => [['c',x,z,.46], ['c',x-.74,z,.26], ['c',x+.74,z,.26]]),
+  ...[[-2.3,1.5],[.6,1.5],[-2.3,3.7],[.6,3.7],[2.2,2.6]].flatMap(([x,z]) => [['c',x,z,.46], ['c',x-.74,z,.26], ['c',x+.74,z,.26]]),
   ...[-.2,.8,1.8].map(z => ['c',-4.92,z,.2]),
   ...[0,1,2,3,4,5,6,7].map(i => ['c',-3.5+i,BAR_Z+1.05,.2]),
 ];
