@@ -349,6 +349,8 @@ async function loadWeather(){
   setTimeout(() => toast('지금 서울은 ' + WX[weather].emoji + ' ' + WX[weather].label + (wxTemp !== null ? ' · ' + wxTemp + '°' : '')), 4200);
   track('weather', {wx: weather});
 }
+setInterval(() => { if (!params.get('weather')) loadWeather.quiet = true, refreshWeather(); }, 20*60*1000);
+async function refreshWeather(){ try { const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=weather_code,temperature_2m&timezone=Asia%2FSeoul'); const j = await r.json(); const w = wxFromCode(j.current.weather_code); wxTemp = Math.round(j.current.temperature_2m); if (w !== weather) { weather = w; applyWeather(); toast('창밖 날씨가 바뀌었어요 · ' + WX[weather].emoji + ' ' + WX[weather].label); } } catch(e) {} }
 function applyWeather(){
   if (rainGainNode) rainGainNode.gain.setTargetAtTime(weather === 'rain' ? .09 : weather === 'storm' ? .14 : 0, actx.currentTime, 1);
   fill.color.set(weather === 'snow' ? '#c8d8ff' : weather === 'clear' ? '#7a8ad0' : '#8aa0ff');
@@ -432,11 +434,11 @@ const pillow = box(.12,.28,.32,mat('#c9873e',{roughness:1}),5.55,.66,1.25); pill
 const pillow2 = box(.12,.28,.32,mat('#8a3a3a',{roughness:1}),5.55,.66,3.15); pillow2.rotation.y = -.25;
 for (const z of [1.3,2.2,3.1]) {
   const hit = new THREE.Mesh(new THREE.BoxGeometry(.7,.3,.8), new THREE.MeshBasicMaterial({visible:false})); hit.position.set(5.3,.4,z); scene.add(hit);
-  addSeat({x:5.12, z, face:-Math.PI/2, h:.44, kind:'sofa', d:1.0, sy:.475, meshes:[hit]});
+  addSeat({x:5.12, z, face:-Math.PI/2, h:.44, kind:'sofa', d:1.15, sy:.475, meshes:[hit]});
 }
 // 커피 테이블 + 러그
-box(.7,.05,2.6,mat('#4a2c1e',{roughness:.4}),4.12,.45,2.2); for (const [dx,dz] of [[-.3,-1.22],[.3,-1.22],[-.3,1.22],[.3,1.22]]) box(.04,.43,.04,stoolM,4.12+dx,.215,2.2+dz);
-candle(4.0,.47,2.5);
+box(.7,.05,2.6,mat('#4a2c1e',{roughness:.4}),3.9,.45,2.2); for (const [dx,dz] of [[-.3,-1.22],[.3,-1.22],[-.3,1.22],[.3,1.22]]) box(.04,.43,.04,stoolM,3.9+dx,.215,2.2+dz);
+candle(3.8,.47,2.5);
 const rugTex = canvasTex(256,256,(g,w,h)=>{ g.fillStyle='#7a3a2a'; g.fillRect(0,0,w,h); g.strokeStyle='#c9873e'; g.lineWidth=8; g.strokeRect(14,14,w-28,h-28); g.lineWidth=3; g.strokeRect(30,30,w-60,h-60); g.fillStyle='#c9873e'; for (let i=0;i<5;i++){ g.save(); g.translate(w/2,h/2); g.rotate(i*Math.PI/5); g.fillRect(-4,-60,8,120); g.restore(); } });
 const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.2,3.2), new THREE.MeshStandardMaterial({map:rugTex, roughness:1})); rug.rotation.x = -Math.PI/2; rug.position.set(4.6,.005,2.2); rug.receiveShadow = true; scene.add(rug);
 const rug2 = new THREE.Mesh(new THREE.PlaneGeometry(7.2,4.4), new THREE.MeshStandardMaterial({map:canvasTex(256,128,(g,w,h)=>{ g.fillStyle='#2a2e3a'; g.fillRect(0,0,w,h); g.strokeStyle='#8a7a5a'; g.lineWidth=4; g.strokeRect(8,8,w-16,h-16); }), roughness:1})); rug2.rotation.x = -Math.PI/2; rug2.position.set(-.3,.004,2.6); rug2.receiveShadow = true; scene.add(rug2);
@@ -487,6 +489,60 @@ const boardTex = canvasTex(256,320,(g,w,h)=>{ g.fillStyle='#1b201c'; g.fillRect(
 const board = new THREE.Mesh(new THREE.PlaneGeometry(.9,1.12), new THREE.MeshStandardMaterial({map:boardTex, roughness:.9}));
 board.position.set(5.88,2.0,-.9); board.rotation.y = -Math.PI/2; scene.add(board);
 // door area hint light
+
+/* ---------- 길찾기: 가구를 피해서 걸어요 ----------
+   가구 자리를 격자에 표시해두고(A*), 찾은 길을 곧게 펴서 걸어가요. */
+const NAV = {x0:-6, z0:-4, cell:.2, nx:60, nz:62};
+const OBST = [
+  ['r',-5,5,-2.6,-1.42], ['r',-6,-5.28,-.9,2.5], ['r',-6,-5.5,2.95,4.55],             // 카운터, 창가 선반, 책장
+  ['r',4.9,6,.5,3.9], ['r',3.5,4.3,.85,3.55],                                        // 소파, 커피 테이블
+  ['c',-4.95,3.15,.4], ['c',-4.95,4.35,.4], ['c',-4.9,3.75,.24], ['c',-5.45,3.75,.12], // 안락의자, 사이드 테이블, 독서등
+  ['c',5.45,4.15,.16],
+  ...[[-5.3,-1.15],[3.15,4.4],[5.3,-.9],[-5.3,7.2],[5.3,7.2]].map(([x,z]) => ['c',x,z,.36]),
+  ...[[-2.3,1.5],[.6,1.5],[-2.3,3.7],[.6,3.7],[2.7,2.6]].flatMap(([x,z]) => [['c',x,z,.46], ['c',x-.74,z,.26], ['c',x+.74,z,.26]]),
+  ...[-.2,.8,1.8].map(z => ['c',-4.92,z,.2]),
+  ...[0,1,2,3,4,5,6,7].map(i => ['c',-3.5+i,BAR_Z+1.05,.2]),
+];
+const BODY_R = .18;
+function navBlockedXY(x,z){
+  if (x < -5.65 || x > 5.65 || z < -3.75 || z > FRONT_Z + .4) return true;
+  for (const o of OBST) {
+    if (o[0] === 'r') { if (x > o[1]-BODY_R && x < o[2]+BODY_R && z > o[3]-BODY_R && z < o[4]+BODY_R) return true; }
+    else if (Math.hypot(x-o[1], z-o[2]) < o[3]+BODY_R) return true;
+  }
+  return false;
+}
+const navGrid = new Uint8Array(NAV.nx*NAV.nz);
+for (let j=0;j<NAV.nz;j++) for (let i=0;i<NAV.nx;i++) navGrid[j*NAV.nx+i] = navBlockedXY(NAV.x0+(i+.5)*NAV.cell, NAV.z0+(j+.5)*NAV.cell) ? 1 : 0;
+const cellOf = (x,z) => [Math.max(0,Math.min(NAV.nx-1,Math.floor((x-NAV.x0)/NAV.cell))), Math.max(0,Math.min(NAV.nz-1,Math.floor((z-NAV.z0)/NAV.cell)))];
+const navBlocked = (x,z) => { const [i,j] = cellOf(x,z); return navGrid[j*NAV.nx+i] === 1; };
+function lineFree(ax,az,bx,bz){ const d = Math.hypot(bx-ax,bz-az), n = Math.ceil(d/.08); for (let k=1;k<n;k++){ const t = k/n; if (navBlocked(ax+(bx-ax)*t, az+(bz-az)*t)) return false; } return true; }
+function findPath(ax,az,bx,bz){
+  if (lineFree(ax,az,bx,bz)) return [[bx,bz]];
+  const [si,sj] = cellOf(ax,az), [gi,gj] = cellOf(bx,bz), N = NAV.nx*NAV.nz, start = sj*NAV.nx+si, goal = gj*NAV.nx+gi;
+  const gs = new Float32Array(N).fill(1e9), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N), open = [start]; gs[start] = 0;
+  const hfn = c => Math.hypot((c%NAV.nx)-gi, Math.floor(c/NAV.nx)-gj);
+  let guard = 0;
+  while (open.length && guard++ < 6000) {
+    let bi = 0, bf = 1e9; for (let k=0;k<open.length;k++){ const f = gs[open[k]] + hfn(open[k]); if (f < bf) { bf = f; bi = k; } }
+    const cur = open.splice(bi,1)[0]; if (cur === goal) break; if (closed[cur]) continue; closed[cur] = 1;
+    const ci = cur % NAV.nx, cj = Math.floor(cur / NAV.nx);
+    for (const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+      const ni = ci+di, nj = cj+dj; if (ni<0||nj<0||ni>=NAV.nx||nj>=NAV.nz) continue;
+      const nb = nj*NAV.nx+ni; if (closed[nb]) continue;
+      if (navGrid[nb] && nb !== goal) continue;
+      if (di && dj && (navGrid[cj*NAV.nx+ni] || navGrid[nj*NAV.nx+ci])) continue;
+      const g2 = gs[cur] + (di && dj ? 1.414 : 1); if (g2 < gs[nb]) { gs[nb] = g2; came[nb] = cur; open.push(nb); }
+    }
+  }
+  if (came[goal] < 0) return [[bx,bz]];
+  const cells = []; for (let c = goal; c !== start && c >= 0; c = came[c]) cells.push(c); cells.reverse();
+  const pts = cells.map(c => [NAV.x0+((c%NAV.nx)+.5)*NAV.cell, NAV.z0+(Math.floor(c/NAV.nx)+.5)*NAV.cell]); pts[pts.length-1] = [bx,bz];
+  // 길 곧게 펴기
+  const out = []; let cx = ax, cz = az, k = 0;
+  while (k < pts.length) { let far = k; for (let m = pts.length-1; m > k; m--) if (lineFree(cx,cz,pts[m][0],pts[m][1])) { far = m; break; } out.push(pts[far]); [cx,cz] = pts[far]; k = far + 1; }
+  return out;
+}
 
 /* ---------- drinks ---------- */
 const DRINKS = {
@@ -676,12 +732,13 @@ class Person {
   }
   sit(i){
     const s = SEATS[i]; if (!s || (s.taken && s.taken !== this)) return false;
-    this.leaveSeat(); s.taken = this; this.seat = i; const bx = s.x - Math.sin(s.face)*.4, bz = s.z - Math.cos(s.face)*.4;
+    this.leaveSeat(); s.taken = this; this.seat = i; const ap = (s.kind === 'sofa' || s.kind === 'read') ? .55 : -.4;   // 소파·안락의자는 앞에서, 나머지는 뒤에서 다가가요
+    const bx = s.x + Math.sin(s.face)*ap, bz = s.z + Math.cos(s.face)*ap;
     this.walkTo(bx, bz, () => { this.pos.set(s.x - Math.sin(s.face)*.02, 0, s.z - Math.cos(s.face)*.02); this.heading = s.face; this.faceTo = s.face; this.pose = 'sit'; this.placeGlass(); if (this.onSat) this.onSat(); });
     return true;
   }
   leaveSeat(){ if (this.book !== null && this.book !== undefined) this.setBook(null); if (this.seat !== null) { const s = SEATS[this.seat]; if (s.taken === this) s.taken = null; this.seat = null; } if (this.pose !== 'stand') this.pose = 'stand'; if (this.glass) { if (this.glass.parent !== scene) { this.glass.parent.remove(this.glass); scene.add(this.glass); } this.glass.visible = false; } if (this.coaster) this.coaster.visible = false; if (this.extra) this.extra.visible = false; }
-  walkTo(x,z,cb){ this.target = new THREE.Vector3(x,0,z); this.arrive = cb || null; this.faceTo = null; if (this.seat === null) this.pose = 'stand'; }
+  walkTo(x,z,cb){ this.path = findPath(this.pos.x, this.pos.z, x, z); const f = this.path.shift(); this.target = new THREE.Vector3(f[0],0,f[1]); this.arrive = cb || null; this.faceTo = null; if (this.seat === null) this.pose = 'stand'; }
   temp(p, sec){ this.tempPose = p; this.tempUntil = now + sec; }
   cheers(){ this.temp(this.seat !== null ? 'cheers' : 'standCheers', 1.6); this.bubUntil = now + 1.8; if (this.glass && this.seat !== null) { this.holdGlass('cheers'); this.holdUntil = now + 1.6; } }
   sip(){ if (this.seat === null || !this.glass) return false; this.temp('sip', 1.9); this.holdGlass('sip'); this.holdStart = now; this.holdUntil = now + 1.8; this.level = Math.max(0, this.level - .2); return true; }
@@ -697,7 +754,7 @@ class Person {
     let walking = false;
     if (this.target) {
       const d = new THREE.Vector3(this.target.x - this.pos.x, 0, this.target.z - this.pos.z), dist = d.length();
-      if (dist < .06) { this.target = null; const cb = this.arrive; this.arrive = null; cb && cb(); }
+      if (dist < .06) { if (this.path && this.path.length) { const n = this.path.shift(); this.target = new THREE.Vector3(n[0],0,n[1]); } else { this.target = null; const cb = this.arrive; this.arrive = null; cb && cb(); } }
       else { d.normalize(); this.pos.addScaledVector(d, Math.min(dist, this.speed*dt)); this.heading = lerpAngle(this.heading, Math.atan2(d.x,d.z), Math.min(1,dt*10)); walking = true; }
     } else if (this.faceTo !== null) this.heading = lerpAngle(this.heading, this.faceTo, Math.min(1,dt*6));
     if (this.holdUntil && now > this.holdUntil) { this.holdUntil = 0; this.holdGlass(false); }
@@ -752,7 +809,7 @@ const CAT_SPOTS = [
   {x:-.4, y:0, z:3.0, pose:'sleep', face:1},
   {x:-4.7, y:.6, z:3.75, pose:'sleep', face:.5},
   {x:-2.6, y:0, z:-.3, pose:'groom', face:.4},
-  {x:4.12, y:.475, z:3.0, pose:'sit', face:-Math.PI/2},
+  {x:3.9, y:.475, z:3.0, pose:'sit', face:-Math.PI/2},
 ];
 const cat = (() => {
   const fur = mat('#d9893e',{roughness:.95}), fur2 = mat('#f3e2c8',{roughness:.95}), dark = mat('#2a1d18');
@@ -772,7 +829,16 @@ const cat = (() => {
   return {g, body, head, legs, tail, parts};
 })();
 const CAT_SLOT = 32000;
-function catSpot(slot){ const h = Math.abs((slot * 2654435761) % 4294967296); return CAT_SPOTS[h % CAT_SPOTS.length]; }
+// 시간 칸마다 정해진 자리 (모두에게 같은 곳). 큰 수 곱셈은 정밀도가 깨져서 32비트 정수 해시를 써요
+function catIdx(slot){ let h = Math.imul(slot ^ 0x5bd1e995, 0x27d4eb2d); h ^= h >>> 15; h = Math.imul(h, 0x165667b1); h ^= h >>> 13; return (h >>> 0) % CAT_SPOTS.length; }
+function catSpot(slot){ let i = catIdx(slot); if (i === catIdx(slot-1)) i = (i + 1 + (slot & 3)) % CAT_SPOTS.length; return CAT_SPOTS[i]; }
+const catPaths = new Map();
+function catPathFor(slot, A, B){
+  if (catPaths.has(slot)) return catPaths.get(slot);
+  const pts = [[A.x, A.z], ...findPath(A.x, A.z, B.x, B.z)]; let len = 0; const seg = [];
+  for (let i=1;i<pts.length;i++){ const l = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); seg.push(l); len += l; }
+  const r = {pts, seg, len}; catPaths.set(slot, r); if (catPaths.size > 6) catPaths.delete(catPaths.keys().next().value); return r;
+}
 let catHeartUntil = 0;
 const catBub = document.createElement('div'); catBub.className = 'bub'; catBub.textContent = '💛'; document.getElementById('labels').appendChild(catBub);
 const catLbl = document.createElement('div'); catLbl.className = 'lbl'; catLbl.textContent = '고양이 노가리'; document.getElementById('labels').appendChild(catLbl); let catLblUntil = 0;
@@ -780,7 +846,7 @@ function updateCat(dt){
   const t = Date.now(), slot = Math.floor(t / CAT_SLOT), e = (t % CAT_SLOT) / 1000;
   const A = catSpot(slot-1), B = catSpot(slot); let x, y, z, pose, face;
   const MOVE = 4.5;
-  if (A !== B && e < MOVE) { const k = e / MOVE, s = k*k*(3-2*k); x = A.x + (B.x-A.x)*s; z = A.z + (B.z-A.z)*s; y = A.y + (B.y-A.y)*s + Math.sin(Math.min(1, Math.max(0,(k-.75)/.25))*Math.PI)*.35*(B.y !== A.y ? 1 : 0); pose = 'walk'; face = Math.atan2(B.x-A.x, B.z-A.z); }
+  if (A !== B && e < MOVE) { const k = e / MOVE, s = k*k*(3-2*k); const P = catPathFor(slot, A, B); let d = s*P.len, i = 0; while (i < P.seg.length-1 && d > P.seg[i]) { d -= P.seg[i]; i++; } const q = P.seg[i] ? Math.min(1, d/P.seg[i]) : 1; x = P.pts[i][0] + (P.pts[i+1][0]-P.pts[i][0])*q; z = P.pts[i][1] + (P.pts[i+1][1]-P.pts[i][1])*q; const fA = Math.atan2(P.pts[i+1][0]-P.pts[i][0], P.pts[i+1][1]-P.pts[i][1]); y = A.y + (B.y-A.y)*s + Math.sin(Math.min(1, Math.max(0,(k-.75)/.25))*Math.PI)*.35*(B.y !== A.y ? 1 : 0); pose = 'walk'; face = fA; }
   else { x = B.x; y = B.y; z = B.z; pose = B.pose; face = B.face; }
   cat.g.position.set(x, y, z); cat.g.rotation.y = lerpAngle(cat.g.rotation.y, face, Math.min(1, dt*6));
   const ph = t/1000;
@@ -1251,7 +1317,7 @@ let lastList = 0;
 function tick(){
   const dt = Math.min(.05, clock.getDelta()); now += dt;
   let fx = 0, fz = 0; if (keys.w||keys.arrowup) fz -= 1; if (keys.s||keys.arrowdown) fz += 1; if (keys.a||keys.arrowleft) fx -= 1; if (keys.d||keys.arrowright) fx += 1;
-  if (fx || fz) { if (me.seat !== null) { me.leaveSeat(); renderVisitors(); } const l = Math.hypot(fx,fz); const dx = (fx*Math.cos(yaw) + fz*Math.sin(yaw))/l, dz = (-fx*Math.sin(yaw) + fz*Math.cos(yaw))/l; me.target = new THREE.Vector3(THREE.MathUtils.clamp(me.pos.x + dx*.5,-5.5,5.5), 0, THREE.MathUtils.clamp(me.pos.z + dz*.5, BAR_Z+1.5, FRONT_Z)); me.arrive = null; }
+  if (fx || fz) { if (me.seat !== null) { me.leaveSeat(); renderVisitors(); } const l = Math.hypot(fx,fz); const dx = (fx*Math.cos(yaw) + fz*Math.sin(yaw))/l, dz = (-fx*Math.sin(yaw) + fz*Math.cos(yaw))/l; const kx = THREE.MathUtils.clamp(me.pos.x + dx*.35,-5.5,5.5), kz = THREE.MathUtils.clamp(me.pos.z + dz*.35, BAR_Z+1.5, FRONT_Z); if (!navBlocked(kx,kz)) { me.target = new THREE.Vector3(kx,0,kz); me.path = []; } else { me.target = null; me.heading = Math.atan2(dx,dz); } me.arrive = null; }
   me.update(dt); bartender.update(dt);
   // bartender wanders behind the bar a little
   if (!bartender.target && Math.random() < dt*.08) bartender.walkTo(rand(-3.5,3.5), -3.05, () => { bartender.faceTo = 0; bartender.pose = 'wipe'; });
@@ -1286,7 +1352,7 @@ renderVisitors(); tick(); loadWeather();
 setTimeout(() => { $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 1300); }, 900);
 setTimeout(() => $('hint').style.opacity = 0, 9000);
 setTimeout(() => { const v = regular.visits; toast(v <= 1 ? '어서 와요, 처음이시죠? 🌙' : v >= 3 ? '⭐ 단골 손님 · ' + v + '번째 방문이에요' : '또 왔네요 · ' + v + '번째 방문'); track('visit', {n: v}); }, 1600);
-window.__bar = {receiptImage, regular, setWeather:w=>{weather=w; applyWeather();}, aimSeat, me, npcs, SEATS, setNapkin, cat, fogStroke, heartPts, openReceipt, startDraw, stats, setYaw:v=>yaw=v, setDist:v=>dist=v, setPitch:v=>pitch=v};
+window.__bar = {findPath, navBlocked, catSpot, CAT_SPOTS, receiptImage, regular, setWeather:w=>{weather=w; applyWeather();}, aimSeat, me, npcs, SEATS, setNapkin, cat, fogStroke, heartPts, openReceipt, startDraw, stats, setYaw:v=>yaw=v, setDist:v=>dist=v, setPitch:v=>pitch=v};
 })();
 </script>
 </body>
